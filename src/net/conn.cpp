@@ -14,6 +14,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <instance.hpp>
 #include <net/conn.hpp>
 #include <string>
 
@@ -32,8 +33,8 @@ using std::placeholders::_2;
 namespace mydss {
 
 void Conn::Send(shared_ptr<SendReq> send_req) {
-  SPDLOG_DEBUG("try to send {} bytes to {}, data='{}'", send_req->data().size(),
-               GetRemoteStr(), send_req->data());
+  SPDLOG_DEBUG("try to send {} bytes to {}", send_req->data().size(),
+               GetRemoteStr());
   sock_->async_send(
       const_buffer(send_req->data().c_str(), send_req->data().size()),
       bind(&Conn::AfterSend, shared_from_this(), send_req, _1, _2));
@@ -82,7 +83,12 @@ void Conn::OnRecv(shared_ptr<Conn> conn, shared_ptr<char*> buf,
   }
 
   for (const auto& req : reqs) {
-    conn->SendError(fmt::format("unknown command '{}'", req));
+    SPDLOG_DEBUG("handle req: {}", req);
+
+    auto inst = Instance::GetInstance();
+    std::shared_ptr<Piece> result;
+    inst->Handle(req, result);
+    conn->SendResult(*result);
   }
 }
 

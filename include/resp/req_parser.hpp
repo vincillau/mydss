@@ -29,8 +29,8 @@ namespace mydss {
 class BulkStringParser {
  public:
   void Reset();
-  Status Step(char ch, bool* completed);
-  std::string MoveOut() { return std::move(value_); }
+  [[nodiscard]] Status Step(char ch, bool* completed);
+  [[nodiscard]] std::string MoveOut() { return std::move(value_); }
 
  private:
   enum class State {
@@ -135,7 +135,8 @@ inline Status BulkStringParser::Step(char ch, bool* completed) {
 class ReqParser {
  public:
   ReqParser() { Reset(); }
-  Status Parse(const char* buf, std::size_t len, std::vector<Req>& reqs);
+  [[nodiscard]] Status Parse(const char* buf, std::size_t len,
+                             std::vector<Req>& reqs);
 
  private:
   enum class State {
@@ -147,7 +148,7 @@ class ReqParser {
   };
 
   void Reset();
-  Status Step(char ch, bool* completed);
+  [[nodiscard]] Status Step(char ch, bool* completed);
 
  private:
   State state_;
@@ -159,7 +160,7 @@ class ReqParser {
 
 inline Status ReqParser::Parse(const char* buf, std::size_t len,
                                std::vector<Req>& reqs) {
-  SPDLOG_DEBUG("parse '{}', len={}", std::string(buf, len), len);
+  SPDLOG_DEBUG("parse the received data, len={}", len);
 
   for (size_t i = 0; i < len; i++) {
     bool completed = false;

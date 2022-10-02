@@ -35,12 +35,14 @@ class Req {
 };
 
 inline static std::ostream& operator<<(std::ostream& os, const Req& req) {
+  os << '(';
   for (size_t i = 0; i < req.pieces().size(); i++) {
-    os << req.pieces()[i].value();
+    os << '\'' << req.pieces()[i].value() << '\'';
     if (i != req.pieces().size() - 1) {
-      os << " ";
+      os << ", ";
     }
   }
+  os << ')';
   return os;
 }
 
