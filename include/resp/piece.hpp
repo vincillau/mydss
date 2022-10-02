@@ -86,19 +86,25 @@ class IntegerPiece : public Piece {
 
 class BulkStringPiece : public Piece {
  public:
-  explicit BulkStringPiece(std::string value = {}) : value_(std::move(value)) {}
+  BulkStringPiece() : null_(true) {}
+  explicit BulkStringPiece(std::string value)
+      : value_(std::move(value)), null_(false) {}
 
   [[nodiscard]] Type type() const override { return Piece::kBulkString; }
   [[nodiscard]] const auto& value() const { return value_; }
   [[nodiscard]] auto& value() { return value_; }
 
   [[nodiscard]] std::string ToString() const override {
+    if (null_) {
+      return Piece::kBulkString + std::string("-1\r\n");
+    }
     return Piece::kBulkString + std::to_string(value_.size()) + "\r\n" +
            value_ + "\r\n";
   }
 
  private:
   std::string value_;
+  bool null_;
 };
 
 class ArrayPiece : public Piece {

@@ -15,6 +15,9 @@
 #ifndef MYDSS_INCLUDE_DB_OBJECT_HPP_
 #define MYDSS_INCLUDE_DB_OBJECT_HPP_
 
+#include <fmt/ostream.h>
+
+#include <cassert>
 #include <list>
 #include <set>
 #include <string>
@@ -26,71 +29,131 @@ namespace mydss {
 
 class Object {
  public:
-  using Str = std::string;
+  using Int = std::int64_t;
+  using Raw = std::string;
   using List = typename std::list<std::string>;
   using Hash = typename std::unordered_map<std::string, std::string>;
   using Set = typename std::unordered_set<std::string>;
   using Zset = typename std::set<std::string>;
 
-  enum class Type { kStr, kList, kHash, kSet, kZset };
+  enum class Type { kString, kList, kHash, kSet, kZset };
+  enum class Encoding {
+    kInt,
+    kEmbStr,
+    kRaw,
+    kHT,
+    kLinkedList,
+    kZipList,
+    kIntSet,
+    kSkipList
+  };
 
-  explicit Object(Type type);
+  explicit Object(Type type) { SetType(type); }
+  explicit Object(std::string str) { set_str(std::move(str)); }
+  explicit Object(List list)
+      : data_(std::move(list)),
+        type_(Type::kList),
+        encoding_(Encoding::kLinkedList) {}
+  explicit Object(Hash hash)
+      : data_(std::move(hash)), type_(Type::kHash), encoding_(Encoding::kHT) {}
+  explicit Object(Set set)
+      : data_(std::move(set)), type_(Type::kSet), encoding_(Encoding::kHT) {}
+  explicit Object(Zset zset)
+      : data_(std::move(zset)), type_(Type::kZset), encoding_(Encoding::kHT) {}
 
   [[nodiscard]] auto type() const { return type_; }
 
-  template <typename T>
-  [[nodiscard]] const T* GetIf() const {
-    return std::get_if<T>(&data_);
-  };
+  std::string str() const;
+  void set_str(std::string str);
 
-  template <typename T>
-  [[nodiscard]] T* GetIf() {
-    return std::get_if<T>(&data_);
-  };
-
-  void ToStr() {
-    type_ = Type::kStr;
-    data_ = Str{};
+  const auto& list() const {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kList);
+    assert(encoding_ == Encoding::kLinkedList);
+    return std::get<List>(data_);
+  }
+  auto& list() {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kList);
+    assert(encoding_ == Encoding::kLinkedList);
+    return std::get<List>(data_);
   }
 
-  void ToList() {
-    type_ = Type::kList;
-    data_ = List{};
-  };
+  const auto& hash() const {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kHash);
+    assert(encoding_ == Encoding::kHT);
+    return std::get<Hash>(data_);
+  }
+  auto& hash() {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kHash);
+    assert(encoding_ == Encoding::kHT);
+    return std::get<Hash>(data_);
+  }
 
-  void ToHash() {
-    type_ = Type::kHash;
-    data_ = Hash{};
-  };
+  const auto& set() const {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kSet);
+    assert(encoding_ == Encoding::kHT);
+    return std::get<Set>(data_);
+  }
+  auto& set() {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kSet);
+    assert(encoding_ == Encoding::kHT);
+    return std::get<Set>(data_);
+  }
 
-  void ToSet() {
-    type_ = Type::kSet;
-    data_ = Set{};
-  };
+  const auto& zset() const {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kZset);
+    assert(encoding_ == Encoding::kHT);
+    return std::get<List>(data_);
+  }
+  auto& zset() {
+    // 调用者负责检查 Object 的类型
+    assert(type_ == Type::kZset);
+    assert(encoding_ == Encoding::kHT);
+    return std::get<Zset>(data_);
+  }
 
-  void ToZset() {
-    type_ = Type::kZset;
-    data_ = Zset{};
-  };
+  void SetType(Type type);
 
  private:
   Type type_;
-  std::variant<Str, List, Hash, Set, Zset> data_;
+  Encoding encoding_;
+  std::variant<Int, Raw, List, Hash, Set, Zset> data_;
 };
 
-inline Object::Object(Type type) {
-  switch (type) {
-    case Type::kStr:
-      ToStr();
-    case Type::kList:
-      ToList();
-    case Type::kHash:
-      ToHash();
-    case Type::kSet:
-      ToSet();
-    case Type::kZset:
-      ToZset();
+inline std::ostream& operator<<(std::ostream& os, Object::Encoding encoding) {
+  switch (encoding) {
+    case Object::Encoding::kInt:
+      os << "kInt";
+      break;
+    case Object::Encoding::kEmbStr:
+      os << "kEmbStr";
+      break;
+    case Object::Encoding::kRaw:
+      os << "kRaw";
+      break;
+    case Object::Encoding::kHT:
+      os << "kHT";
+      break;
+    case Object::Encoding::kLinkedList:
+      os << "kLinkedList";
+      break;
+    case Object::Encoding::kZipList:
+      os << "kZipList";
+      break;
+    case Object::Encoding::kIntSet:
+      os << "kIntSet";
+      break;
+    case Object::Encoding::kSkipList:
+      os << "kSkipList";
+      break;
   }
+  return os;
 }
 
 }  // namespace mydss

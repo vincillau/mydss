@@ -14,13 +14,53 @@
 
 #include <command/string.hpp>
 
+using fmt::format;
 using std::make_shared;
 using std::shared_ptr;
 
 namespace mydss::string {
-Status Set(const Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
-  SPDLOG_DEBUG("SET");
+Status Set(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
+  if (req.pieces().size() != 3) {
+    piece = make_shared<ErrorPiece>(format(
+        "wrong number of arguments for '{}' command", req.pieces()[0].value()));
+    return Status::Ok();
+  }
+  const auto& key = req.pieces()[1];
+  const auto& value = req.pieces()[2];
+
+  auto& db_map = inst.GetCurDb().map();
+  auto it = db_map.find(key.value());
+  if (it != db_map.end()) {
+    it->second.set_str(value.value());
+  } else {
+    db_map.insert({key.value(), Object(value.value())});
+  }
+
   piece = make_shared<SimpleStringPiece>("OK");
+  return Status::Ok();
+}
+
+Status Get(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
+  if (req.pieces().size() != 2) {
+    piece = make_shared<ErrorPiece>(format(
+        "wrong number of arguments for '{}' command", req.pieces()[0].value()));
+    return Status::Ok();
+  }
+  const auto& key = req.pieces()[1];
+
+  const auto& db_map = inst.GetCurDb().map();
+  auto it = db_map.find(key.value());
+  if (it != db_map.end()) {
+    if (it->second.type() != Object::Type::kString) {
+      piece = make_shared<ErrorPiece>(
+          "WRONGTYPE Operation against a key holding the wrong kind of value");
+      return Status::Ok();
+    }
+    piece = make_shared<BulkStringPiece>(it->second.str());
+  } else {
+    piece = make_shared<BulkStringPiece>();
+  }
+
   return Status::Ok();
 }
 

@@ -17,6 +17,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <db/db.hpp>
 #include <functional>
 #include <resp/req.hpp>
 #include <status.hpp>
@@ -26,15 +27,21 @@ namespace mydss {
 
 class Instance {
  public:
-  using Command = typename std::function<Status(const Instance&, const Req&,
+  using Command = typename std::function<Status(Instance&, const Req&,
                                                 std::shared_ptr<Piece>&)>;
 
-  Instance() { InitModules(); }
+  Instance() : dbs_(1), db_index_(0) { InitModules(); }
+
+  [[nodiscard]] const auto& dbs() const { return dbs_; }
+  [[nodiscard]] auto& dbs() { return dbs_; }
+
+  [[nodiscard]] const auto& CurDb() const { return dbs_[db_index_]; }
+  [[nodiscard]] auto& GetCurDb() { return dbs_[db_index_]; }
 
   void RegisterCommand(std::string command_name, Command command);
   void Handle(const Req& req, std::shared_ptr<Piece>& result);
 
-  [[nodiscard]] static std::shared_ptr<Instance> GetInstance() { return inst_; }
+  [[nodiscard]] static std::shared_ptr<Instance> GetInstance();
 
  private:
   void InitModules();
@@ -43,6 +50,8 @@ class Instance {
 
  private:
   std::unordered_map<std::string, Command> commands_;
+  std::vector<Db> dbs_;
+  int db_index_;
 };
 
 }  // namespace mydss

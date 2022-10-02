@@ -12,20 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_COMMAND_STRING_HPP_
-#define MYDSS_INCLUDE_COMMAND_STRING_HPP_
+#ifndef MYDSS_INCLUDE_DB_DB_HPP_
+#define MYDSS_INCLUDE_DB_DB_HPP_
 
-#include <instance.hpp>
-#include <resp/req.hpp>
-#include <status.hpp>
+#include <unordered_map>
 
-namespace mydss ::string {
+#include "object.hpp"
 
-[[nodiscard]] Status Set(Instance& inst, const Req& req,
-                         std::shared_ptr<Piece>& piece);
-[[nodiscard]] Status Get(Instance& inst, const Req& req,
-                         std::shared_ptr<Piece>& piece);
+namespace mydss {
 
-}  // namespace mydss::string
+class Db {
+ public:
+  [[nodiscard]] const auto& map() const { return map_; }
+  [[nodiscard]] auto& map() { return map_; }
 
-#endif // MYDSS_INCLUDE_COMMAND_STRING_HPP_
+ private:
+  std::unordered_map<std::string, Object> map_;
+};
+
+}  // namespace mydss
+
+#endif  // MYDSS_INCLUDE_DB_DB_HPP_

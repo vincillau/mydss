@@ -49,7 +49,14 @@ static void HandleUnknownCommand(const Req& req,
 
 }  // namespace
 
-shared_ptr<Instance> Instance::inst_ = make_shared<Instance>();
+shared_ptr<Instance> Instance::inst_;
+
+shared_ptr<Instance> Instance::GetInstance() {
+  if (!inst_) {
+    inst_ = make_shared<Instance>();
+  }
+  return inst_;
+}
 
 void Instance::RegisterCommand(std::string command_name, Command command) {
   StrToUpper(command_name);
@@ -59,7 +66,7 @@ void Instance::RegisterCommand(std::string command_name, Command command) {
     commands_.erase(it);
     return;
   }
-  SPDLOG_INFO("register command '{}'", command_name);
+  SPDLOG_DEBUG("register command '{}'", command_name);
   commands_[command_name] = command;
 }
 
@@ -82,6 +89,9 @@ void Instance::Handle(const Req& req, std::shared_ptr<Piece>& result) {
   }
 }
 
-void Instance::InitModules() { RegisterCommand("SET", string::Set); }
+void Instance::InitModules() {
+  RegisterCommand("SET", string::Set);
+  RegisterCommand("GET", string::Get);
+}
 
 }  // namespace mydss
