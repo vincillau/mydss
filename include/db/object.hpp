@@ -62,6 +62,7 @@ class Object {
       : data_(std::move(zset)), type_(Type::kZset), encoding_(Encoding::kHT) {}
 
   [[nodiscard]] auto type() const { return type_; }
+  [[nodiscard]] auto encoding() const { return encoding_; }
 
   std::string str() const;
   void set_str(std::string str);
@@ -126,33 +127,52 @@ class Object {
   std::variant<Int, Raw, List, Hash, Set, Zset> data_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, Object::Encoding encoding) {
+inline std::string ObjectTypeStr(Object::Type type) {
+  switch (type) {
+    case Object::Type::kString:
+      return "string";
+    case Object::Type::kList:
+      return "list";
+    case Object::Type::kHash:
+      return "hash";
+    case Object::Type::kSet:
+      return "set";
+    case Object::Type::kZset:
+      return "zset";
+  }
+}
+
+inline std::string ObjectEncodingStr(Object::Encoding encoding) {
   switch (encoding) {
     case Object::Encoding::kInt:
-      os << "kInt";
+      return "int";
       break;
     case Object::Encoding::kEmbStr:
-      os << "kEmbStr";
+      return "embstr";
       break;
     case Object::Encoding::kRaw:
-      os << "kRaw";
+      return "raw";
       break;
     case Object::Encoding::kHT:
-      os << "kHT";
+      return "hashtable";
       break;
     case Object::Encoding::kLinkedList:
-      os << "kLinkedList";
+      return "linkedlist";
       break;
     case Object::Encoding::kZipList:
-      os << "kZipList";
+      return "ziplist";
       break;
     case Object::Encoding::kIntSet:
-      os << "kIntSet";
+      return "intset";
       break;
     case Object::Encoding::kSkipList:
-      os << "kSkipList";
+      return "skiplist";
       break;
   }
+}
+
+inline std::ostream& operator<<(std::ostream& os, Object::Encoding encoding) {
+  os << ObjectEncodingStr(encoding);
   return os;
 }
 

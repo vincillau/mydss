@@ -70,7 +70,7 @@ class ErrorPiece : public Piece {
 
 class IntegerPiece : public Piece {
  public:
-  explicit IntegerPiece(std::uint64_t value = 0) : value_(value) {}
+  explicit IntegerPiece(std::int64_t value = 0) : value_(value) {}
 
   [[nodiscard]] Type type() const override { return Piece::kInteger; }
   [[nodiscard]] const auto& value() const { return value_; }
@@ -81,7 +81,7 @@ class IntegerPiece : public Piece {
   }
 
  private:
-  std::uint64_t value_;
+  std::int64_t value_;
 };
 
 class BulkStringPiece : public Piece {
@@ -115,7 +115,7 @@ class ArrayPiece : public Piece {
 
   [[nodiscard]] std::string ToString() const override {
     std::string str{Piece::kArray};
-    str += std::to_string(pieces_.size());
+    str += std::to_string(pieces_.size()) + "\r\n";
     for (const auto& piece : pieces_) {
       str += piece->ToString();
     }

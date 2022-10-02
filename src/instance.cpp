@@ -15,8 +15,10 @@
 #include <spdlog/spdlog.h>
 
 #include <cassert>
+#include <command/generic.hpp>
 #include <command/string.hpp>
 #include <instance.hpp>
+#include <util.hpp>
 
 using fmt::format;
 using std::make_shared;
@@ -25,14 +27,6 @@ using std::shared_ptr;
 namespace mydss {
 
 namespace {
-
-static void StrToUpper(std::string& str) {
-  for (char& ch : str) {
-    if (ch >= 'a' && ch <= 'z') {
-      ch = ch - 'a' + 'A';
-    }
-  }
-};
 
 static void HandleUnknownCommand(const Req& req,
                                  std::shared_ptr<Piece>& result) {
@@ -90,8 +84,18 @@ void Instance::Handle(const Req& req, std::shared_ptr<Piece>& result) {
 }
 
 void Instance::InitModules() {
-  RegisterCommand("SET", string::Set);
+  // Generic
+  RegisterCommand("DEL", generic::Del);
+  RegisterCommand("EXISTS", generic::Exists);
+  RegisterCommand("KEYS", generic::Keys);
+  RegisterCommand("OBJECT", generic::Object);
+  RegisterCommand("RENAME", generic::Rename);
+  RegisterCommand("RENAMENX", generic::RenameNx);
+  RegisterCommand("TYPE", generic::Type);
+
+  // String
   RegisterCommand("GET", string::Get);
+  RegisterCommand("SET", string::Set);
 }
 
 }  // namespace mydss
