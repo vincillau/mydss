@@ -16,8 +16,10 @@
 #define MYDSS_INCLUDE_DB_OBJECT_HPP_
 
 #include <fmt/ostream.h>
+#include <spdlog/spdlog.h>
 
 #include <cassert>
+#include <ctime>
 #include <list>
 #include <set>
 #include <string>
@@ -66,6 +68,7 @@ class Object {
 
   std::string str() const;
   void set_str(std::string str);
+  auto access_time() const { return access_time_; }
 
   const auto& list() const {
     // 调用者负责检查 Object 的类型
@@ -120,11 +123,16 @@ class Object {
   }
 
   void SetType(Type type);
+  void Touch() {
+    access_time_ = std::time(nullptr);
+    SPDLOG_DEBUG("touch object, access_time={}", access_time_);
+  }
 
  private:
   Type type_;
   Encoding encoding_;
   std::variant<Int, Raw, List, Hash, Set, Zset> data_;
+  std::time_t access_time_;
 };
 
 inline std::string ObjectTypeStr(Object::Type type) {

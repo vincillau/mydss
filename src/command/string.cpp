@@ -34,6 +34,7 @@ Status Set(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
     it->second.set_str(value.value());
   } else {
     db_map.insert({key.value(), Object(value.value())});
+    db_map.at(key.value()).Touch();
   }
 
   piece = make_shared<SimpleStringPiece>("OK");
@@ -48,7 +49,7 @@ Status Get(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
   }
   const auto& key = req.pieces()[1];
 
-  const auto& db_map = inst.GetCurDb().map();
+  auto& db_map = inst.GetCurDb().map();
   auto it = db_map.find(key.value());
   if (it != db_map.end()) {
     if (it->second.type() != Object::Type::kString) {
@@ -57,6 +58,7 @@ Status Get(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
       return Status::Ok();
     }
     piece = make_shared<BulkStringPiece>(it->second.str());
+    it->second.Touch();
   } else {
     piece = make_shared<BulkStringPiece>();
   }

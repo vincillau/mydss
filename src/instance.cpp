@@ -91,6 +91,7 @@ void Instance::InitModules() {
   RegisterCommand("OBJECT", generic::Object);
   RegisterCommand("RENAME", generic::Rename);
   RegisterCommand("RENAMENX", generic::RenameNx);
+  RegisterCommand("TOUCH", generic::Touch);
   RegisterCommand("TYPE", generic::Type);
 
   // String

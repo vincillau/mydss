@@ -100,8 +100,9 @@ Status Object(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
 
   if (sub_command == "ENCODING") {
     return ObjectEncoding(inst, req, piece);
-  }
-  if (sub_command == "REFCOUNT") {
+  } else if (sub_command == "IDLETIME") {
+    return ObjectIdleTime(inst, req, piece);
+  } else if (sub_command == "REFCOUNT") {
     return ObjectRefCount(inst, req, piece);
   }
 
@@ -131,7 +132,25 @@ Status ObjectEncoding(Instance& inst, const Req& req,
   return Status::Ok();
 }
 
-Status ObjectIdleTime(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
+Status ObjectIdleTime(Instance& inst, const Req& req,
+                      shared_ptr<Piece>& piece) {
+  if (req.pieces().size() != 3) {
+    piece = make_shared<ErrorPiece>(
+        "wrong number of arguments for 'object|idletime' command");
+    return Status::Ok();
+  }
+  const string& key = req.pieces()[2].value();
+
+  auto& db_map = inst.GetCurDb().map();
+  auto it = db_map.find(key);
+  if (it == db_map.end()) {
+    piece = make_shared<BulkStringPiece>();
+  } else {
+    time_t now = time(nullptr);
+    piece = make_shared<IntegerPiece>(now - it->second.access_time());
+  }
+  return Status::Ok();
+}
 
 Status ObjectRefCount(Instance& inst, const Req& req,
                       shared_ptr<Piece>& piece) {
@@ -175,6 +194,7 @@ Status Rename(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
     piece = make_shared<ErrorPiece>("no such key");
   } else {
     db_map.insert({new_key, std::move(it->second)});
+    db_map.at(new_key).Touch();
     db_map.erase(key);
     piece = make_shared<SimpleStringPiece>("OK");
   }
@@ -201,13 +221,34 @@ Status RenameNx(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
       return Status::Ok();
     }
     db_map.insert({new_key, std::move(it->second)});
+    db_map.at(new_key).Touch();
     db_map.erase(key);
     piece = make_shared<IntegerPiece>(1);
   }
   return Status::Ok();
 }
 
-Status Touch(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
+Status Touch(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
+  if (req.pieces().size() == 1) {
+    piece = make_shared<ErrorPiece>(
+        "wrong number of arguments for 'touch' command");
+    return Status::Ok();
+  }
+
+  auto& db_map = inst.GetCurDb().map();
+  size_t ntouch = 0;
+  for (size_t i = 1; i < req.pieces().size(); i++) {
+    const string& key = req.pieces()[i].value();
+    auto it = db_map.find(key);
+    if (it != db_map.end()) {
+      it->second.Touch();
+      ntouch++;
+    }
+  }
+
+  piece = make_shared<IntegerPiece>(ntouch);
+  return Status::Ok();
+}
 
 Status Ttl(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
 
