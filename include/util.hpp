@@ -27,6 +27,43 @@ static void StrToUpper(std::string& str) {
   }
 };
 
+// 如果 str 表示一个 int64_t，返回 true；否则返回 false
+static bool StrToI64(const std::string& str, int64_t* i64) {
+  if (str.empty()) {
+    return false;
+  }
+
+  *i64 = 0;
+  int sign = 1;
+
+  size_t i = 0;
+  if (str[0] == '-') {
+    if (str.size() == 1) {
+      return false;
+    }
+    sign = -1;
+  }
+
+  for (; i < str.size(); i++) {
+    if (!(str[i] >= '0' && str[i] <= '9')) {
+      return false;
+    }
+
+    if (*i64 > INT64_MAX / 10) {
+      return false;
+    }
+    *i64 *= 10;
+
+    int digit = str[i] - '0';
+    if (INT64_MAX - *i64 < digit) {
+      return false;
+    }
+  }
+
+  *i64 *= sign;
+  return true;
+}
+
 }  // namespace mydss
 
 #endif  // MYDSS_INCLUDE_UTIL_HPP_

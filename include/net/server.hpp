@@ -25,8 +25,9 @@ namespace mydss {
 
 class Server {
  public:
-  Server(std::string ip, std::uint16_t port)
-      : ip_(std::move(ip)), port_(port) {}
+  Server(std::string ip, std::uint16_t port,
+         std::shared_ptr<asio::io_context> ctx)
+      : ip_(std::move(ip)), port_(port), ctx_(ctx) {}
 
   void Run();
 
@@ -37,7 +38,7 @@ class Server {
  private:
   std::string ip_;
   std::uint16_t port_;
-  asio::io_service service_;
+  std::shared_ptr<asio::io_context> ctx_;
   std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
 };
 

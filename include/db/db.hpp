@@ -15,19 +15,48 @@
 #ifndef MYDSS_INCLUDE_DB_DB_HPP_
 #define MYDSS_INCLUDE_DB_DB_HPP_
 
+#include <sys/time.h>
+
+#include <list>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "object.hpp"
+#include "time_wheel.hpp"
 
 namespace mydss {
 
+constexpr std::size_t kTimeInterval = 5;
+constexpr std::size_t kSlotNum = 12;
+
 class Db {
  public:
+  Db() : tw_(kTimeInterval, kSlotNum) {}
+
   [[nodiscard]] const auto& map() const { return map_; }
   [[nodiscard]] auto& map() { return map_; }
 
+  void Timeout() {
+    auto expired = tw_.Timeout();
+    for (const auto& [key, _] : expired) {
+      auto it = map_.find(key);
+      if (it == map_.end()) {
+        continue;
+      }
+
+      // ttl 可能已经被更改，需要重新检查
+      if (!it->second.HasTtl() || it->second.pttl() <= 0) {
+        continue;
+      }
+
+      map_.erase(key);
+    }
+  }
+
  private:
   std::unordered_map<std::string, Object> map_;
+  TimeWheel tw_;
 };
 
 }  // namespace mydss

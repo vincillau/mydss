@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <sys/time.h>
+
 #include <command/generic.hpp>
 #include <regex>
 #include <util.hpp>
@@ -63,7 +65,116 @@ Status Exists(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
   return Status::Ok();
 }
 
-Status Expire(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
+Status Expire(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
+  if (req.pieces().size() < 3) {
+    piece = make_shared<ErrorPiece>(
+        "wrong number of arguments for 'expire' command");
+    return Status::Ok();
+  }
+  const string& key = req.pieces()[1].value();
+  const string& seconds = req.pieces()[2].value();
+  int64_t sec = 0;
+  bool is_num = StrToI64(seconds, &sec);
+  if (!is_num) {
+    piece = make_shared<ErrorPiece>("value is not an integer or out of range");
+    return Status::Ok();
+  }
+
+  bool xx = false;
+  bool nx = false;
+  bool gt = false;
+  bool lt = false;
+  for (size_t i = 3; i < req.pieces().size(); i++) {
+    auto opt = req.pieces()[i].value();
+    StrToUpper(opt);
+    if (opt == "XX") {
+      xx = true;
+    } else if (opt == "NX") {
+      nx = true;
+    } else if (opt == "GT") {
+      gt = true;
+    } else if (opt == "LT") {
+      lt = true;
+    } else {
+      piece = make_shared<ErrorPiece>(
+          format("Unsupported option {}", req.pieces()[i].value()));
+      return Status::Ok();
+    }
+  }
+
+  if (nx && (xx || gt || lt)) {
+    piece = make_shared<ErrorPiece>(
+        "NX and XX, GT or LT options at the same time are not compatible");
+    return Status::Ok();
+  }
+  if (gt && lt) {
+    piece = make_shared<ErrorPiece>(
+        "GT and LT options at the same time are not compatible");
+    return Status::Ok();
+  }
+
+  auto& db_map = inst.GetCurDb().map();
+  auto it = db_map.find(key);
+
+  if (it == db_map.end()) {
+    piece = make_shared<IntegerPiece>(0);
+    return Status::Ok();
+  }
+
+  if (nx) {
+    if (it->second.HasTtl()) {
+      piece = make_shared<IntegerPiece>(0);
+    } else {
+      it->second.set_ttl(sec);
+      piece = make_shared<IntegerPiece>(1);
+    }
+    return Status::Ok();
+  }
+
+  if (gt) {
+    if (it->second.HasTtl()) {
+      double ttl = it->second.ttl();
+      if (sec > ttl) {
+        it->second.set_ttl(sec);
+        piece = make_shared<IntegerPiece>(1);
+      } else {
+        piece = make_shared<IntegerPiece>(0);
+      }
+    } else {
+      piece = make_shared<IntegerPiece>(0);
+    }
+    return Status::Ok();
+  }
+
+  if (lt) {
+    if (it->second.HasTtl()) {
+      double ttl = it->second.ttl();
+      if (sec < ttl) {
+        it->second.set_ttl(sec);
+        piece = make_shared<IntegerPiece>(1);
+      } else {
+        piece = make_shared<IntegerPiece>(0);
+      }
+    } else {
+      piece = make_shared<IntegerPiece>(0);
+    }
+    return Status::Ok();
+  }
+
+  if (xx) {
+    if (it->second.HasTtl()) {
+      it->second.set_ttl(sec);
+      piece = make_shared<IntegerPiece>(1);
+    } else {
+      piece = make_shared<IntegerPiece>(0);
+    }
+    return Status::Ok();
+  }
+
+  it->second.set_ttl(sec);
+  piece = make_shared<IntegerPiece>(1);
+  return Status::Ok();
+}
 
 Status ExpireAt(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
 
@@ -171,13 +282,56 @@ Status ObjectRefCount(Instance& inst, const Req& req,
   return Status::Ok();
 }
 
-Status Persist(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
+Status Persist(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
+  if (req.pieces().size() != 2) {
+    piece =
+        make_shared<ErrorPiece>("wrong number of arguments for 'ttl' command");
+    return Status::Ok();
+  }
+  const string& key = req.pieces()[1].value();
+
+  auto& db_map = inst.GetCurDb().map();
+  auto it = db_map.find(key);
+  if (it == db_map.end()) {
+    piece = make_shared<IntegerPiece>(0);
+  } else if (it->second.expire().tv_sec == 0 &&
+             it->second.expire().tv_usec == 0) {
+    piece = make_shared<IntegerPiece>(0);
+  } else {
+    it->second.set_expire({0, 0});
+    it->second.Touch();
+    piece = make_shared<IntegerPiece>(1);
+  }
+
+  return Status::Ok();
+}
 
 Status PExpire(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
 
 Status PExpireAt(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
 
-Status PTtl(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
+Status PTtl(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
+  if (req.pieces().size() != 2) {
+    piece =
+        make_shared<ErrorPiece>("wrong number of arguments for 'pttl' command");
+    return Status::Ok();
+  }
+  const string& key = req.pieces()[1].value();
+
+  const auto& db_map = inst.GetCurDb().map();
+  auto it = db_map.find(key);
+  if (it == db_map.end()) {
+    piece = make_shared<IntegerPiece>(-2);
+  } else if (it->second.expire().tv_sec == 0 &&
+             it->second.expire().tv_usec == 0) {
+    piece = make_shared<IntegerPiece>(-1);
+  } else {
+    int64_t pttl = static_cast<int64_t>(it->second.pttl());
+    piece = make_shared<IntegerPiece>(pttl);
+  }
+
+  return Status::Ok();
+}
 
 Status Rename(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
   if (req.pieces().size() != 3) {
@@ -250,7 +404,28 @@ Status Touch(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
   return Status::Ok();
 }
 
-Status Ttl(Instance& inst, const Req& req, shared_ptr<Piece>& piece);
+Status Ttl(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
+  if (req.pieces().size() != 2) {
+    piece =
+        make_shared<ErrorPiece>("wrong number of arguments for 'ttl' command");
+    return Status::Ok();
+  }
+  const string& key = req.pieces()[1].value();
+
+  const auto& db_map = inst.GetCurDb().map();
+  auto it = db_map.find(key);
+  if (it == db_map.end()) {
+    piece = make_shared<IntegerPiece>(-2);
+  } else if (it->second.expire().tv_sec == 0 &&
+             it->second.expire().tv_usec == 0) {
+    piece = make_shared<IntegerPiece>(-1);
+  } else {
+    int64_t ttl = static_cast<int64_t>(it->second.ttl());
+    piece = make_shared<IntegerPiece>(ttl);
+  }
+
+  return Status::Ok();
+}
 
 Status Type(Instance& inst, const Req& req, shared_ptr<Piece>& piece) {
   if (req.pieces().size() != 2) {

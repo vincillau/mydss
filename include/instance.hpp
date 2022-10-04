@@ -30,7 +30,7 @@ class Instance {
   using Command = typename std::function<Status(Instance&, const Req&,
                                                 std::shared_ptr<Piece>&)>;
 
-  Instance() : dbs_(1), db_index_(0) { InitModules(); }
+  Instance() : dbs_(16), db_index_(0) { InitModules(); }
 
   [[nodiscard]] const auto& dbs() const { return dbs_; }
   [[nodiscard]] auto& dbs() { return dbs_; }
@@ -40,8 +40,12 @@ class Instance {
 
   void RegisterCommand(std::string command_name, Command command);
   void Handle(const Req& req, std::shared_ptr<Piece>& result);
+  void Timeout();
 
-  [[nodiscard]] static std::shared_ptr<Instance> GetInstance();
+  static void Init();
+  [[nodiscard]] static std::shared_ptr<Instance> GetInstance() {
+    return inst_;
+  };
 
  private:
   void InitModules();
@@ -53,6 +57,12 @@ class Instance {
   std::vector<Db> dbs_;
   int db_index_;
 };
+
+inline void Instance::Timeout() {
+  for (Db& db : dbs_) {
+    db.Timeout();
+  }
+}
 
 }  // namespace mydss
 

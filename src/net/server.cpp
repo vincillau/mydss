@@ -37,16 +37,16 @@ void Server::Run() {
   tcp::endpoint ep(address::from_string(ip_), port_);
 
   try {
-    acceptor_ = make_shared<tcp::acceptor>(service_, ep);
+    acceptor_ = make_shared<tcp::acceptor>(*ctx_, ep);
   } catch (const system_error& e) {
     SPDLOG_CRITICAL("create acceptor error: `({}) {}`", e.code(), e.what());
     exit(EXIT_FAILURE);
   }
 
-  auto sock = make_shared<tcp::socket>(service_);
+  auto sock = make_shared<tcp::socket>(*ctx_);
   acceptor_->async_accept(*sock, bind(&Server::OnAccept, this, sock, _1));
 
-  service_.run();
+  ctx_->run();
 }
 
 void Server::OnAccept(shared_ptr<tcp::socket> sock, const error_code& err) {
@@ -63,7 +63,7 @@ void Server::OnAccept(shared_ptr<tcp::socket> sock, const error_code& err) {
   conn->Recv(Conn::kBufSize);
 
   SPDLOG_DEBUG("try to accept a new connection");
-  auto new_sock = make_shared<tcp::socket>(service_);
+  auto new_sock = make_shared<tcp::socket>(*ctx_);
   acceptor_->async_accept(*new_sock,
                           bind(&Server::OnAccept, this, new_sock, _1));
 }

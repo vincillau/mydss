@@ -45,12 +45,7 @@ static void HandleUnknownCommand(const Req& req,
 
 shared_ptr<Instance> Instance::inst_;
 
-shared_ptr<Instance> Instance::GetInstance() {
-  if (!inst_) {
-    inst_ = make_shared<Instance>();
-  }
-  return inst_;
-}
+void Instance::Init() { inst_ = make_shared<Instance>(); }
 
 void Instance::RegisterCommand(std::string command_name, Command command) {
   StrToUpper(command_name);
@@ -87,11 +82,15 @@ void Instance::InitModules() {
   // Generic
   RegisterCommand("DEL", generic::Del);
   RegisterCommand("EXISTS", generic::Exists);
+  RegisterCommand("EXPIRE", generic::Expire);
   RegisterCommand("KEYS", generic::Keys);
   RegisterCommand("OBJECT", generic::Object);
+  RegisterCommand("PERSIST", generic::Persist);
+  RegisterCommand("PTTL", generic::PTtl);
   RegisterCommand("RENAME", generic::Rename);
   RegisterCommand("RENAMENX", generic::RenameNx);
   RegisterCommand("TOUCH", generic::Touch);
+  RegisterCommand("TTL", generic::Ttl);
   RegisterCommand("TYPE", generic::Type);
 
   // String

@@ -17,6 +17,7 @@
 
 #include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
+#include <sys/time.h>
 
 #include <cassert>
 #include <ctime>
@@ -68,7 +69,16 @@ class Object {
 
   std::string str() const;
   void set_str(std::string str);
+
   auto access_time() const { return access_time_; }
+
+  const auto& expire() const { return expire_; }
+  void set_expire(const timeval& expire) { expire_ = expire; }
+
+  [[nodiscard]] double ttl() const;
+  void set_ttl(double ttl);
+  [[nodiscard]] double pttl() const;
+  [[nodiscard]] bool HasTtl() const;
 
   const auto& list() const {
     // 调用者负责检查 Object 的类型
@@ -132,7 +142,9 @@ class Object {
   Type type_;
   Encoding encoding_;
   std::variant<Int, Raw, List, Hash, Set, Zset> data_;
-  std::time_t access_time_;
+  std::time_t access_time_ = 0;
+  // timeval.tv.sec 和 timeval.tv_usec 都为 0 时表示永不过期
+  timeval expire_{0, 0};
 };
 
 inline std::string ObjectTypeStr(Object::Type type) {
@@ -182,6 +194,36 @@ inline std::string ObjectEncodingStr(Object::Encoding encoding) {
 inline std::ostream& operator<<(std::ostream& os, Object::Encoding encoding) {
   os << ObjectEncodingStr(encoding);
   return os;
+}
+
+inline double Object::ttl() const {
+  timeval now;
+  gettimeofday(&now, nullptr);
+  double ttl = (expire_.tv_sec - now.tv_sec) +
+               (expire_.tv_usec - now.tv_usec) / (1000.0 * 1000.0);
+  return ttl;
+}
+
+inline void Object::set_ttl(double ttl) {
+  std::int64_t sec = static_cast<std::int64_t>(ttl);
+  std::int64_t usec = static_cast<std::int64_t>((ttl - sec) * 1000.0 * 1000.0);
+  timeval now;
+  gettimeofday(&now, nullptr);
+  now.tv_sec += sec;
+  now.tv_usec += usec;
+  expire_ = now;
+}
+
+inline double Object::pttl() const {
+  timeval now;
+  gettimeofday(&now, nullptr);
+  double pttl = (expire_.tv_sec - now.tv_sec) * 1000.0 +
+                (expire_.tv_usec - now.tv_usec) / 1000.0;
+  return pttl;
+}
+
+inline bool Object::HasTtl() const {
+  return !(expire_.tv_sec == 0 && expire_.tv_usec == 0);
 }
 
 }  // namespace mydss
