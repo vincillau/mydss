@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_ERR_ERR_CODE_HPP_
-#define MYDSS_INCLUDE_ERR_ERR_CODE_HPP_
+#ifndef MYDSS_INCLUDE_ERR_CODE_HPP_
+#define MYDSS_INCLUDE_ERR_CODE_HPP_
 
 // MyDSS 错误码
 namespace mydss::err {
@@ -24,4 +24,4 @@ static constexpr int kEof = 2;      // 读取到 EOF
 
 }  // namespace mydss::err
 
-#endif  // MYDSS_INCLUDE_ERR_ERR_CODE_HPP_
+#endif  // MYDSS_INCLUDE_ERR_CODE_HPP_

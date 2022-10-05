@@ -23,22 +23,29 @@
 
 namespace mydss::net {
 
+// IPv4 地址
 class Addr {
  public:
+  // 存储点分 IPv4 的字符串，包含结尾的 '\0' 最多 16 个字节
+  static constexpr size_t kInetNtopBufSize = 16;
+
   Addr() : ip_{}, port_(0) {}
   Addr(std::string ip, uint16_t port) : ip_(std::move(ip)), port_(port) {}
 
   [[nodiscard]] const auto& ip() const { return ip_; }
   [[nodiscard]] auto port() const { return port_; }
 
+  // 将 Addr 转换为 struct sockaddr 的表示形式
   // 若成功返回 true，否则返回 false
-  [[nodiscard]] bool ToSockAddrIn(sockaddr_in& sock_addr);
+  [[nodiscard]] bool ToSockAddr(sockaddr& sock_addr) const;
+
+  // 将 struct sockaddr 转换为 Addr
   // 若成功返回 true，否则返回 false
-  [[nodiscard]] bool FromSockAddrIn(const sockaddr_in& sock_addr);
+  [[nodiscard]] bool FromSockAddr(const sockaddr& sock_addr);
 
  private:
-  std::string ip_;
-  uint16_t port_;
+  std::string ip_;  // 点分 IPv4 地址
+  uint16_t port_;   // 端口号
 };
 
 // 向 std::ostream 输出 Addr 的字符串表示形式，用于 fmt 库

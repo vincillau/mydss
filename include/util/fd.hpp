@@ -15,11 +15,20 @@
 #ifndef MYDSS_INCLUDE_UTIL_FD_HPP_
 #define MYDSS_INCLUDE_UTIL_FD_HPP_
 
+#include <fcntl.h>
+
 namespace mydss::util {
 
 // 将文件描述符设置非阻塞模式
 // 若成功返回 true，否则返回 false 并设置 errno
-bool FdSetNonBlock(int fd);
+inline static bool FdSetNonBlock(int fd) {
+  int flags = fcntl(fd, F_GETFL, 0);
+  if (flags < 0) {
+    return false;
+  }
+  flags |= O_NONBLOCK;
+  return fcntl(fd, F_SETFL, flags) != -1;
+}
 
 }  // namespace mydss::util
 

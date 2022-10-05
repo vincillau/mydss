@@ -17,23 +17,24 @@
 
 namespace mydss::net {
 
-static constexpr size_t kInetNtopBufSize = 16;
-
-bool Addr::ToSockAddrIn(sockaddr_in& sock_addr) {
+bool Addr::ToSockAddr(sockaddr& sock_addr) const {
   memset(&sock_addr, 0, sizeof(sock_addr));
-  sock_addr.sin_family = AF_INET;
-  sock_addr.sin_port = htons(port_);
-  return inet_pton(AF_INET, ip_.c_str(), &sock_addr.sin_addr) == 1;
+  auto sock_addr_in = reinterpret_cast<sockaddr_in*>(&sock_addr);
+  sock_addr_in->sin_family = AF_INET;
+  sock_addr_in->sin_port = htons(port_);  // 端口号需要是网络序
+  return inet_pton(AF_INET, ip_.c_str(), &sock_addr_in->sin_addr) == 1;
 }
 
-bool Addr::FromSockAddrIn(const sockaddr_in& sock_addr) {
+bool Addr::FromSockAddr(const sockaddr& sock_addr) {
   char buf[kInetNtopBufSize] = {};
   const char* ret = inet_ntop(AF_INET, &sock_addr, buf, kInetNtopBufSize);
   if (ret == nullptr) {
     return false;
   }
+
   ip_ = buf;
-  port_ = ntohs(sock_addr.sin_port);
+  auto sock_addr_in = reinterpret_cast<const sockaddr_in*>(&sock_addr);
+  port_ = ntohs(sock_addr_in->sin_port);  // 将网络序的端口号转换为主机序
   return true;
 }
 

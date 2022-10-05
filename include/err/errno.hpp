@@ -17,20 +17,20 @@
 #include <cstring>
 #include <string>
 
-#ifndef MYDSS_INCLUDE_ERR_ERRNO_STR_HPP_
-#define MYDSS_INCLUDE_ERR_ERRNO_STR_HPP_
+#ifndef MYDSS_INCLUDE_ERR_ERRNO_HPP_
+#define MYDSS_INCLUDE_ERR_ERRNO_HPP_
 
 namespace mydss::err {
 
-constexpr size_t kErrnoStrBufLen = 64;
+constexpr size_t kErrnoStrBufSize = 64;
 
-// 线程安全版本的 str_errno
+// 线程安全版本的 str_error
 inline static std::string ErrnoStr() {
-  char buf[kErrnoStrBufLen] = {};
-  const char* err_str = strerror_r(errno, buf, kErrnoStrBufLen);
+  char buf[kErrnoStrBufSize] = {};
+  const char* err_str = strerror_r(errno, buf, kErrnoStrBufSize);
   return {err_str};
 }
 
 }  // namespace mydss::err
 
-#endif  // MYDSS_INCLUDE_ERR_ERRNO_STR_HPP_
+#endif  // MYDSS_INCLUDE_ERR_ERRNO_HPP_

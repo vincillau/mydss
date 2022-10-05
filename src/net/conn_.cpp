@@ -12,17 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <spdlog/spdlog.h>
 #include <unistd.h>
 
-#include <err/err_code.hpp>
+#include <err/code.hpp>
 #include <net/conn_.hpp>
 
 using mydss::err::kEof;
 using mydss::err::kOk;
+using mydss::err::kUnknown;
 using mydss::util::Buf;
+using std::bind;
 using std::shared_ptr;
 
 namespace mydss::net {
+
+void Conn::Connect(int sock, Addr remote) {
+  sock_ = sock;
+  remote_ = std::move(remote);
+
+  loop_->Add(sock_, bind(&Conn::OnRecv, shared_from_this()));
+}
+
+void Conn::Close() {
+  assert(sock_ != -1);
+
+  loop_->Remove(sock_);
+  close(sock_);
+  sock_ = -1;
+}
 
 void Conn::AsyncRecv(Buf buf, RecvHandler handler) {
   assert(handler);
@@ -50,41 +68,22 @@ void Conn::AsyncRecv(Buf buf, RecvHandler handler) {
 void Conn::AsyncSend(const Buf& buf, SendHandler handler) {}
 
 void Conn::OnRecv(shared_ptr<Conn> conn) {
-  if (!conn->recv_handler_) {
-    return;
-  }
+  assert(conn->recv_handler_);
+  assert(conn->recv_buf_.data() != nullptr);
 
-  auto handler = std::move(conn->recv_handler_);
   int nbytes = read(conn->sock_, conn->recv_buf_.data(), conn->recv_buf_.len());
-  if (nbytes > 0) {
-    handler(kOk, nbytes);
-    return;
-  }
+  int code = kOk;
   if (nbytes == 0) {
-    handler(kEof, nbytes);
-    return;
+    code = kEof;
+  } else if (nbytes == -1) {
+    code = kUnknown;
   }
 
-  // TODO(Vincil Lau): 暂时使用 errno 作为错误码
-  handler(errno, nbytes);
-  return;
+  // 每次触发读事件后移除 recv_handler_
+  auto handler = std::move(conn->recv_handler_);
+  handler(code, nbytes);
 }
 
 void Conn::OnSend(shared_ptr<Conn> conn) {}
-
-void Conn::Connect(int sock, Addr remote) {
-  sock_ = sock;
-  remote_ = std::move(remote);
-
-  loop_->AddFd(sock_, std::bind(&Conn::OnRecv, shared_from_this()));
-}
-
-void Conn::Close() {
-  assert(sock_ != -1);
-
-  loop_->RemoveFd(sock_);
-  close(sock_);
-  sock_ = -1;
-}
 
 }  // namespace mydss::net

@@ -15,7 +15,7 @@
 #include <spdlog/spdlog.h>
 #include <sys/epoll.h>
 
-#include <err/errno_str.hpp>
+#include <err/errno.hpp>
 #include <net/loop.hpp>
 
 using mydss::err::ErrnoStr;
@@ -29,11 +29,11 @@ Loop::Loop() : epfd_(epoll_create(1)) {
   }
 }
 
-void Loop::AddFd(int fd, Handler read_handler) {
-  assert(read_handler);                 // read_handler 不能为空
+void Loop::Add(int fd, Handler handler) {
+  assert(handler);                      // 读事件的 handler 不能为空
   assert(fds_.find(fd) == fds_.end());  // 不能重复添加 fd
 
-  fds_[fd].first = std::move(read_handler);
+  fds_[fd].first = std::move(handler);
 
   epoll_event ev;
   ev.data.fd = fd;
@@ -47,7 +47,8 @@ void Loop::AddFd(int fd, Handler read_handler) {
 
 void Loop::SetWriteHandler(int fd, Handler handler) {
   assert(fds_.find(fd) != fds_.end());
-  assert(fds_.at(fd).second);
+  const auto& old_handler = fds_.at(fd).second;
+  assert(static_cast<bool>(handler) ^ static_cast<bool>(old_handler));
 
   fds_.at(fd).second = std::move(handler);
 
@@ -62,7 +63,7 @@ void Loop::SetWriteHandler(int fd, Handler handler) {
   }
 }
 
-void Loop::RemoveFd(int fd) {
+void Loop::Remove(int fd) {
   assert(fds_.find(fd) != fds_.end());
 
   fds_.erase(fd);
@@ -87,12 +88,15 @@ void Loop::Run() {
     }
 
     if (ev.events & EPOLLIN) {
-      fds_.at(ev.data.fd).first();
+      const auto& handler = fds_.at(ev.data.fd).first;
+      assert(handler);
+      handler();
     }
+
     if (ev.events & EPOLLOUT) {
-      const auto& write_handler = fds_[ev.data.fd].second;
-      assert(write_handler);
-      write_handler();
+      const auto& handler = fds_.at(ev.data.fd).second;
+      assert(handler);
+      handler();
     }
   }
 }

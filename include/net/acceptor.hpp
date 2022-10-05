@@ -25,40 +25,38 @@ namespace mydss::net {
 
 class Acceptor : public std::enable_shared_from_this<Acceptor> {
  public:
+  // 接受连接事件的 handler
   using AcceptHandler = std::function<void()>;
 
-  static constexpr int kBackLog = 512;
-
   // 保证所有的 Acceptor 对象都由 std::shared_ptr 持有
-  [[nodiscard]] static auto New(std::shared_ptr<Loop> loop, Addr addr) {
-    return std::shared_ptr<Acceptor>(new Acceptor(loop, std::move(addr)));
+  [[nodiscard]] static auto New(std::shared_ptr<Loop> loop) {
+    return std::shared_ptr<Acceptor>(new Acceptor(loop));
   }
 
-  void Start() {
-    Bind();
-    Listen();
-  }
+  // 将 Acceptor 绑定到 addr
+  void Bind(const Addr& addr);
 
-  // 异步接收连接
+  // 开始接受连接
+  void Listen(int backlog);
+
+  // 异步接受连接
   void AsyncAccept(std::shared_ptr<Conn> conn, AcceptHandler handler);
 
  private:
-  // 创建监听 addr 的 Acceptor
-  Acceptor(std::shared_ptr<Loop> loop, Addr addr);
+  Acceptor(std::shared_ptr<Loop> loop);
 
-  void Bind();
-  void Listen();
+  // 接受连接
+  // 若成功，返回 true；若发生 EAGAIN 错误，返回 false
   bool Accept(std::shared_ptr<Conn> conn);
 
   // 处理可以建立连接的事件
   static void OnAccept(std::shared_ptr<Acceptor> acceptor);
 
  private:
-  std::shared_ptr<Loop> loop_;
-  Addr addr_;
-  int listen_fd_;
-  AcceptHandler handler_;
-  std::shared_ptr<Conn> conn_;
+  std::shared_ptr<Loop> loop_;  // 监听 listen_fd_ 的事件循环
+  int listen_fd_;               // 监听套接字
+  std::shared_ptr<Conn> conn_;  // 接受的 Conn 对象
+  AcceptHandler handler_;       // 处理连接事件的 handler
 };
 
 }  // namespace mydss::net

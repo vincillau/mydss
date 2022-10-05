@@ -21,22 +21,43 @@
 
 namespace mydss::net {
 
+// 事件循环，监听文件描述符的读写事件，并在事件触发时调用 handler
+// Loop 始终监听加入其中的读事件，而是否监听写事件由使用者决定
+// 监听 fd 采用边缘触发模式
 class Loop {
  public:
   using Handler = std::function<void()>;
 
+  // 确保 Loop 对象一定被 std::shared_ptr 持有
   [[nodiscard]] static auto New() { return std::shared_ptr<Loop>(new Loop()); }
 
-  void AddFd(int fd, Handler read_handler);
+  // 将 fd 添加到事件循环，并注册读事件对应的 handler
+  // 添加后事件循环将开始监听 fd 的读事件
+  // handler 不能为空
+  void Add(int fd, Handler handler);
+
+  // 设置写事件的 handler
+  // 如果 handler 不为空，开始监听写事件
+  // 如果 handler 为空，停止监听写事件
+  // 只能在 handler 为空时设置 handler
+  // 只能在 handler 不为空时清空 handler
   void SetWriteHandler(int fd, Handler handler);
-  void RemoveFd(int fd);
-  void Run();
+
+  // 从事件循环中移除 fd
+  void Remove(int fd);
+
+  // 运行事件循环
+  [[noreturn]] void Run();
 
  private:
+  // 创建 epoll fd
   Loop();
 
  private:
+  // epoll 文件描述符
   int epfd_;
+  // 添加到事件循环的文件描述符
+  // key 为 fd，value 分别为该 fd 的读事件 handler 和写事件 handler
   std::unordered_map<int, std::pair<Handler, Handler>> fds_;
 };
 
