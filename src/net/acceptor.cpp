@@ -20,13 +20,24 @@
 #include <cstring>
 #include <err/errno.hpp>
 #include <net/acceptor.hpp>
-#include <util/fd.hpp>
 
 using mydss::err::ErrnoStr;
-using mydss::util::FdSetNonBlock;
 using std::shared_ptr;
 
 namespace mydss::net {
+
+namespace {
+
+static bool FdSetNonBlock(int fd) {
+  int flags = fcntl(fd, F_GETFL, 0);
+  if (flags < 0) {
+    return false;
+  }
+  flags |= O_NONBLOCK;
+  return fcntl(fd, F_SETFL, flags) != -1;
+}
+
+}  // namespace
 
 Acceptor::Acceptor(std::shared_ptr<Loop> loop)
     : loop_(loop), listen_fd_(socket(AF_INET, SOCK_STREAM, 0)) {
