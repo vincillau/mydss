@@ -15,12 +15,7 @@
 #ifndef MYDSS_INCLUDE_DB_OBJECT_HPP_
 #define MYDSS_INCLUDE_DB_OBJECT_HPP_
 
-#include <fmt/ostream.h>
-#include <spdlog/spdlog.h>
-#include <sys/time.h>
-
 #include <cassert>
-#include <ctime>
 #include <list>
 #include <set>
 #include <string>
