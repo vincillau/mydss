@@ -12,72 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <spdlog/spdlog.h>
+#include <sys/time.h>
 
 #include <db/object.hpp>
-#include <util.hpp>
 
-using std::string;
-using std::to_string;
+namespace mydss::db {
 
-namespace mydss {
+namespace {
 
-string Object::str() const {
-  assert(type_ == Type::kString);
-  assert(encoding_ == Encoding::kInt || encoding_ == Encoding::kRaw);
-
-  if (encoding_ == Encoding::kInt) {
-    SPDLOG_DEBUG("access string object: encoding={}, value='{}'", encoding_,
-                 std::get<Int>(data_));
-    return to_string(std::get<Int>(data_));
-  }
-  SPDLOG_DEBUG("access string object: encoding={}, value='{}'", encoding_,
-               std::get<Raw>(data_));
-  return std::get<Raw>(data_);
+static int64_t TimeInMsec() {
+  timeval now;
+  gettimeofday(&now, nullptr);
+  int64_t ts = now.tv_sec * 1000 + now.tv_usec / 1000;
+  return ts;
 }
 
-void Object::set_str(std::string str) {
-  type_ = Type::kString;
+}  // namespace
 
-  Int i64;
-  bool is_num = StrToI64(str, &i64);
-  if (is_num) {
-    encoding_ = Encoding::kInt;
-    data_ = i64;
-    SPDLOG_DEBUG("set string object: encoding={}, value='{}'", encoding_,
-                 std::get<Int>(data_));
-  } else {
-    encoding_ = Encoding::kRaw;
-    data_ = std::move(str);
-    SPDLOG_DEBUG("set string object: encoding={}, value='{}'", encoding_,
-                 std::get<Raw>(data_));
+void Object::Touch() { access_time_ = TimeInMsec(); }
+
+int64_t Object::pttl() const {
+  if (expire_time_ == INT64_MAX) {
+    return -1;  // 永不过期
   }
+  int64_t now = TimeInMsec();
+  if (expire_time_ <= now) {
+    return 0;
+  }
+  return expire_time_ - now;
 }
 
-void Object::SetType(Type type) {
-  type_ = type;
-  switch (type) {
-    case Type::kString:
-      encoding_ = Encoding::kRaw;
-      data_ = Raw{};
-      break;
-    case Type::kList:
-      encoding_ = Encoding::kLinkedList;
-      data_ = List{};
-      break;
-    case Type::kHash:
-      encoding_ = Encoding::kHT;
-      data_ = Hash{};
-      break;
-    case Type::kSet:
-      encoding_ = Encoding::kHT;
-      data_ = Set{};
-      break;
-    case Type::kZset:
-      encoding_ = Encoding::kHT;
-      data_ = Zset{};
-      break;
+void Object::set_pttl(int64_t msec) {
+  assert(msec >= -1);
+
+  if (msec == -1) {
+    expire_time_ = INT64_MAX;
+    return;
   }
+  int64_t now = TimeInMsec();
+  expire_time_ = now + msec;
 }
 
-}  // namespace mydss
+}  // namespace mydss::db
