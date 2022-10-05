@@ -13,108 +13,125 @@
 // limitations under the License.
 
 #include <spdlog/spdlog.h>
+#include <unistd.h>
 
-#include <instance.hpp>
+#include <err/code.hpp>
 #include <net/conn.hpp>
-#include <string>
 
-using asio::buffer;
-using asio::const_buffer;
-using asio::error_code;
-using asio::error::eof;
+using mydss::err::kEof;
+using mydss::err::kOk;
+using mydss::err::kUnknown;
+using mydss::util::Buf;
 using std::bind;
-using std::make_shared;
 using std::shared_ptr;
-using std::string;
-using std::vector;
-using std::placeholders::_1;
-using std::placeholders::_2;
 
-namespace mydss {
+namespace mydss::net {
 
-void Conn::Send(shared_ptr<SendReq> send_req) {
-  SPDLOG_DEBUG("try to send {} bytes to {}", send_req->data().size(),
-               GetRemoteStr());
-  sock_->async_send(
-      const_buffer(send_req->data().c_str(), send_req->data().size()),
-      bind(&Conn::AfterSend, shared_from_this(), send_req, _1, _2));
+void Conn::Connect(int sock, Addr remote) {
+  sock_ = sock;
+  remote_ = std::move(remote);
+
+  // 开始监听读事件
+  loop_->Add(sock_, bind(&Conn::OnRecv, shared_from_this()));
 }
 
-void Conn::Recv(size_t buf_size) {
-  SPDLOG_DEBUG("try to receive from {}, buf_size={}", GetRemoteStr(), buf_size);
+void Conn::Close() {
+  assert(sock_ != -1);
 
-  auto buf = make_shared<char*>(new char[buf_size]);
-  sock_->async_receive(buffer(*buf, buf_size),
-                       bind(&Conn::OnRecv, shared_from_this(), buf, _1, _2));
+  loop_->Remove(sock_);
+  close(sock_);
+  sock_ = -1;
 }
 
-void Conn::HandleRecvErr(const error_code& err) {
-  if (err == eof) {
-    SPDLOG_DEBUG(
-        "recv error from {}: `({}) {}`, remote closed the "
-        "connection",
-        GetRemoteStr(), err, err.message());
+void Conn::AsyncRecv(Buf buf, RecvHandler handler) {
+  assert(handler);
+  assert(!recv_handler_);
 
-  } else {
-    SPDLOG_ERROR(
-        "recv error from {}: `({}) {}`, close the "
-        "connection",
-        GetRemoteStr(), err, err.message());
-  }
-
-  // 出错后关闭连接
-  sock_->close();
-}
-
-void Conn::OnRecv(shared_ptr<Conn> conn, shared_ptr<char*> buf,
-                  const error_code& err, size_t nrecv) {
-  if (err) {
-    conn->HandleRecvErr(err);
+  int nbytes = read(sock_, buf.data(), buf.len());
+  if (nbytes > 0) {
+    handler(kOk, nbytes);
     return;
   }
-  SPDLOG_DEBUG("received {} bytes from {}", nrecv, conn->GetRemoteStr());
-
-  vector<Req> reqs;
-  Status status = conn->parser_.Parse(*buf, nrecv, reqs);
-  if (status.error()) {
-    SPDLOG_WARN("parse error: `{}` for '{}'", status, string(*buf, nrecv));
-    conn->SendError(status.msg());
+  if (nbytes == 0) {
+    handler(kEof, nbytes);
+    return;
+  }
+  if (errno != EAGAIN) {
+    // TODO(Vincil Lau): 暂时使用 errno 作为错误码
+    handler(errno, nbytes);
     return;
   }
 
-  for (const auto& req : reqs) {
-    SPDLOG_DEBUG("handle req: {}", req);
-
-    auto inst = Instance::GetInstance();
-    std::shared_ptr<Piece> result;
-    inst->Handle(req, result);
-    conn->SendResult(*result);
-  }
+  recv_handler_ = std::move(handler);
+  recv_buf_ = buf;
 }
 
-void Conn::AfterSend(shared_ptr<Conn> conn, shared_ptr<SendReq> send_req,
-                     const error_code& err, std::size_t nsend) {
-  if (err) {
-    SPDLOG_ERROR("send to {} error: `({}) {}`", conn->GetRemoteStr(), err,
-                 err.message());
-    // 出错后关闭连接
-    conn->sock_->close();
+void Conn::AsyncSend(const Buf& buf, SendHandler handler) {
+  assert(handler);
+
+  if (send_queue_.size() > 0) {
+    // 套接字写缓冲区已满，直接追加到发送队列
+    send_queue_.push_back({buf, std::move(handler)});
+  }
+
+  // 尝试发送
+  int nbytes = write(sock_, buf.data(), buf.len());
+  if (nbytes == buf.len()) {
+    // 发送成功
+    handler(kOk, nbytes);
+    return;
+  }
+  if (errno != EAGAIN) {
+    // 发送失败
+    // TODO(Vincil Lau): 暂时使用 errno 作为错误码
+    handler(errno, nbytes);
     return;
   }
 
-  SPDLOG_DEBUG("sent {} bytes to {}", nsend, conn->GetRemoteStr());
-
-  switch (send_req->action()) {
-    case SendReq::Action::kDoNothing:
-      break;
-    case SendReq::Action::kRecv:
-      conn->Recv(kBufSize);
-      break;
-    case SendReq::Action::kClose:
-      SPDLOG_DEBUG("close connection from {}", conn->GetRemoteStr());
-      conn->sock_->close();
-      break;
-  }
+  // 套接字写缓冲区已满，开始监听写事件
+  loop_->SetWriteHandler(sock_, bind(&Conn::OnSend, shared_from_this()));
+  send_queue_.push_back({buf, std::move(handler)});
 }
 
-}  // namespace mydss
+void Conn::OnRecv(shared_ptr<Conn> conn) {
+  assert(conn->recv_handler_);
+  assert(conn->recv_buf_.data() != nullptr);
+
+  int nbytes = read(conn->sock_, conn->recv_buf_.data(), conn->recv_buf_.len());
+  int code = kOk;
+  code = (nbytes == 0) ? kEof : code;
+  code = (nbytes == -1) ? kUnknown : code;
+
+  // 每次触发读事件后移除 recv_handler_
+  auto handler = std::move(conn->recv_handler_);
+  handler(code, nbytes);
+}
+
+void Conn::OnSend(shared_ptr<Conn> conn) {
+  assert(conn->send_queue_.size() > 0);
+
+  while (conn->send_queue_.size() > 0) {
+    const Buf& buf = conn->send_queue_.front().first;
+    const SendHandler& handler = std::move(conn->send_queue_.front().second);
+
+    int nbytes = write(conn->sock_, buf.data(), buf.len());
+    if (nbytes == buf.len()) {
+      handler(kOk, nbytes);
+      conn->send_queue_.pop_front();
+      continue;
+    }
+    if (errno != EAGAIN) {
+      // TODO(Vincil Lau): 暂时使用 errno 作为错误码
+      handler(errno, nbytes);
+      conn->send_queue_.pop_front();
+      continue;
+    }
+    // 尚未发送完毕，等待下一个写事件
+    return;
+  }
+
+  // 发送完毕，停止监听写事件
+  conn->loop_->SetWriteHandler(conn->sock_, {});
+}
+
+}  // namespace mydss::net

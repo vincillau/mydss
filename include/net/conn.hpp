@@ -15,76 +15,65 @@
 #ifndef MYDSS_INCLUDE_NET_CONN_HPP_
 #define MYDSS_INCLUDE_NET_CONN_HPP_
 
-#include <asio.hpp>
-#include <memory>
-#include <resp/req_parser.hpp>
+#include <cassert>
+#include <list>
+#include <util/buf.hpp>
 
-#include "send_req.hpp"
+#include "addr.hpp"
+#include "loop.hpp"
 
-namespace mydss {
+namespace mydss::net {
 
 class Conn : public std::enable_shared_from_this<Conn> {
  public:
-  static constexpr std::size_t kBufSize = 4096;
+  using RecvHandler =
+      std::function<void(int /* MyDSS 错误码 */, int /* 接收的字节数 */)>;
+  using SendHandler =
+      std::function<void(int /* MyDSS 错误码 */, int /* 发送的字节数 */)>;
 
-  Conn(std::shared_ptr<asio::ip::tcp::socket> sock)
-      : sock_(sock), remote_(sock_->remote_endpoint()) {}
-
-  std::string GetRemoteStr() {
-    return fmt::format("{}:{}", remote_.address().to_string(), remote_.port());
+  // 保证所有的 Conn 对象都由 std::shared_ptr 持有
+  [[nodiscard]] static auto New(std::shared_ptr<Loop> loop) {
+    return std::shared_ptr<Conn>(new Conn(loop));
   }
 
-  void Recv(std::size_t buf_size);
+  // Conn 对象在销毁前必须被关闭，防止文件描述符泄漏
+  ~Conn() { assert(sock_ == -1); }
+
+  // 异步接收数据，将接收到的数据存储到 buf，并调用 handler
+  void AsyncRecv(util::Buf buf, RecvHandler handler);
+
+  // 发送 buf 中的数据，在发送完成后调用 handler
+  // 调用者需要保证至少在调用 handler 前 buf 底层的内存不被释放
+  void AsyncSend(const util::Buf& buf, SendHandler handler);
+
+  // 在建立连接时调用，将设置连接套接字 sock 和远程的地址
+  void Connect(int sock, Addr remote);
+
+  // 关闭连接
+  void Close();
 
  private:
-  void Send(std::shared_ptr<SendReq> send_req);
-  void HandleRecvErr(const asio::error_code& err);
+  explicit Conn(std::shared_ptr<Loop> loop) : loop_(loop), sock_(-1) {}
 
-  void SendResult(const Piece& piece);
-  void SendSimpleString(std::string str);
-  void SendError(std::string str);
-  void SendBulkString(std::string str);
-  void SendInteger(std::uint64_t u64);
+  // 处理读事件，读取数据到 buf，并调用 handler
+  static void OnRecv(std::shared_ptr<Conn> conn);
 
-  static void OnRecv(std::shared_ptr<Conn> conn, std::shared_ptr<char*> buf,
-                     const asio::error_code& err, std::size_t nrecv);
-  static void AfterSend(std::shared_ptr<Conn> conn,
-                        std::shared_ptr<SendReq> send_req,
-                        const asio::error_code& err, std::size_t nsend);
+  static void OnSend(std::shared_ptr<Conn> conn);
 
  private:
-  std::shared_ptr<asio::ip::tcp::socket> sock_;
-  // 远程关闭连接后无法获取远程的地址，所以提前保存
-  asio::ip::tcp::endpoint remote_;
-  ReqParser parser_;
+  // 监听 Conn 读写事件的事件循环
+  std::shared_ptr<Loop> loop_;
+  // 连接套接字
+  int sock_;
+  // 远程的地址
+  Addr remote_;
+  // 存储接收到的数据的缓冲区
+  util::Buf recv_buf_;
+  // 处理读事件的 handler
+  RecvHandler recv_handler_;
+  std::list<std::pair<const util::Buf&, SendHandler>> send_queue_;
 };
 
-inline void Conn::SendResult(const Piece& piece) {
-  auto send_req =
-      std::make_shared<SendReq>(piece.ToString(), SendReq::Action::kRecv);
-  Send(send_req);
-}
-
-inline void Conn::SendSimpleString(std::string str) {
-  SimpleStringPiece piece(std::move(str));
-  SendResult(piece);
-}
-
-inline void Conn::SendError(std::string str) {
-  ErrorPiece piece(std::move(str));
-  SendResult(piece);
-}
-
-inline void Conn::SendBulkString(std::string str) {
-  BulkStringPiece piece(std::move(str));
-  SendResult(piece);
-}
-
-inline void Conn::SendInteger(std::uint64_t u64) {
-  IntegerPiece piece(u64);
-  SendResult(piece);
-}
-
-}  // namespace mydss
+}  // namespace mydss::net
 
 #endif  // MYDSS_INCLUDE_NET_CONN_HPP_

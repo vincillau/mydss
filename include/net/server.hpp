@@ -15,33 +15,40 @@
 #ifndef MYDSS_INCLUDE_NET_SERVER_HPP_
 #define MYDSS_INCLUDE_NET_SERVER_HPP_
 
-#include <asio.hpp>
-#include <cstdint>
 #include <memory>
-#include <status.hpp>
-#include <string>
 
-namespace mydss {
+#include "acceptor.hpp"
+#include "addr.hpp"
+#include "loop.hpp"
 
-class Server {
+namespace mydss::net {
+
+class Server : public std::enable_shared_from_this<Server> {
  public:
-  Server(std::string ip, std::uint16_t port,
-         std::shared_ptr<asio::io_context> ctx)
-      : ip_(std::move(ip)), port_(port), ctx_(ctx) {}
+  static auto New(std::shared_ptr<Loop> loop, const Addr& addr) {
+    return std::shared_ptr<Server>(new Server(loop, addr));
+  }
 
-  void Run();
-
- private:
-  void OnAccept(std::shared_ptr<asio::ip::tcp::socket> sock,
-                const asio::error_code& err);
+  void Start();
 
  private:
-  std::string ip_;
-  std::uint16_t port_;
-  std::shared_ptr<asio::io_context> ctx_;
-  std::shared_ptr<asio::ip::tcp::acceptor> acceptor_;
+  static void OnAccept(std::shared_ptr<Server> server,
+                       std::shared_ptr<Conn> conn);
+
+  static void OnRecv(std::shared_ptr<Conn> conn, std::shared_ptr<char> buf,
+                     int err, int nbytes);
+
+  Server(std::shared_ptr<Loop> loop, Addr addr)
+      : loop_(loop), addr_(std::move(addr)) {
+    acceptor_ = Acceptor::New(loop);
+  }
+
+ private:
+  std::shared_ptr<Loop> loop_;
+  std::shared_ptr<Acceptor> acceptor_;
+  Addr addr_;
 };
 
-}  // namespace mydss
+}  // namespace mydss::net
 
 #endif  // MYDSS_INCLUDE_NET_SERVER_HPP_

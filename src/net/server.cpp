@@ -14,58 +14,58 @@
 
 #include <spdlog/spdlog.h>
 
-#include <cstdlib>
-#include <functional>
-#include <net/conn.hpp>
+#include <err/code.hpp>
+#include <err/errno.hpp>
 #include <net/server.hpp>
 
-using asio::ip::address;
-using asio::ip::tcp;
-using std::bind;
-using std::error_code;
-using std::make_shared;
+using mydss::err::ErrnoStr;
+using mydss::err::kEof;
+using mydss::err::kOk;
+using mydss::util::Buf;
 using std::shared_ptr;
-using std::system_error;
+using std::string;
 using std::placeholders::_1;
+using std::placeholders::_2;
 
-namespace mydss {
+namespace mydss::net {
 
-void Server::Run() {
-  SPDLOG_INFO("bind on {}:{}", ip_, port_);
+static constexpr int kBacklog = 512;
+static constexpr int kBufSize = 2048;
 
-  SPDLOG_DEBUG("try to accept a new connection");
-  tcp::endpoint ep(address::from_string(ip_), port_);
+void Server::Start() {
+  acceptor_->Bind(addr_);
+  acceptor_->Listen(kBacklog);
+  auto conn = Conn::New(loop_);
+  acceptor_->AsyncAccept(conn,
+                         bind(&Server::OnAccept, shared_from_this(), conn));
+}
 
-  try {
-    acceptor_ = make_shared<tcp::acceptor>(*ctx_, ep);
-  } catch (const system_error& e) {
-    SPDLOG_CRITICAL("create acceptor error: `({}) {}`", e.code(), e.what());
+void Server::OnAccept(shared_ptr<Server> server, shared_ptr<Conn> conn) {
+  auto buf = shared_ptr<char>(new char[kBufSize]);
+  conn->AsyncRecv(Buf(buf.get(), kBufSize),
+                  bind(&Server::OnRecv, conn, buf, _1, _2));
+
+  auto new_conn = Conn::New(server->loop_);
+  server->acceptor_->AsyncAccept(conn, bind(&Server::OnAccept, server, conn));
+}
+
+void Server::OnRecv(shared_ptr<Conn> conn, shared_ptr<char> buf, int err,
+                    int nbytes) {
+  if (err == kEof) {
+    SPDLOG_DEBUG("connection was closed by peer");
+    conn->Close();
+    return;
+  }
+
+  if (err != kOk) {
+    SPDLOG_CRITICAL("receive failed, reason='{}'", ErrnoStr());
     exit(EXIT_FAILURE);
   }
 
-  auto sock = make_shared<tcp::socket>(*ctx_);
-  acceptor_->async_accept(*sock, bind(&Server::OnAccept, this, sock, _1));
+  SPDLOG_DEBUG("received data: '{}'", string(buf.get(), nbytes));
 
-  ctx_->run();
+  conn->AsyncRecv(Buf(buf.get(), kBufSize),
+                  bind(&Server::OnRecv, conn, buf, _1, _2));
 }
 
-void Server::OnAccept(shared_ptr<tcp::socket> sock, const error_code& err) {
-  if (err) {
-    SPDLOG_CRITICAL("accept error: `({}) {}`", err, err.message());
-    exit(EXIT_FAILURE);
-  }
-
-  SPDLOG_DEBUG("accepted from {}:{}",
-               sock->remote_endpoint().address().to_string(),
-               sock->remote_endpoint().port());
-
-  auto conn = make_shared<Conn>(sock);
-  conn->Recv(Conn::kBufSize);
-
-  SPDLOG_DEBUG("try to accept a new connection");
-  auto new_sock = make_shared<tcp::socket>(*ctx_);
-  acceptor_->async_accept(*new_sock,
-                          bind(&Server::OnAccept, this, new_sock, _1));
-}
-
-}  // namespace mydss
+}  // namespace mydss::net
