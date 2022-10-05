@@ -17,13 +17,14 @@
 
 #include <cstdint>
 
-namespace mydss {
+namespace mydss::limit {
 
 // 请求中字符串的最大数目
-constexpr std::uint64_t kMaxStrInReq = UINT16_MAX;
-// 请求中字符串的最大长度
-constexpr std::uint64_t kStrLenMaxInReq = UINT16_MAX;
+constexpr uint64_t kMaxStrInReq = UINT16_MAX;
 
-}  // namespace mydss
+// 请求中字符串的最大长度
+constexpr uint64_t kMaxStrLenInReq = UINT16_MAX;
+
+}  // namespace mydss::limit
 
 #endif  // MYDSS_INCLUDE_LIMIT_HPP_

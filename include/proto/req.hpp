@@ -12,32 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_RESP_REQ_HPP_
-#define MYDSS_INCLUDE_RESP_REQ_HPP_
+#ifndef MYDSS_INCLUDE_PROTO_REQ_HPP_
+#define MYDSS_INCLUDE_PROTO_REQ_HPP_
 
 #include <fmt/ostream.h>
 
-#include <status.hpp>
+#include <string>
 #include <vector>
 
-#include "piece.hpp"
+namespace mydss::proto {
 
-namespace mydss {
-
-// Redis 请求
+// 请求对象，是一个 Bulk String 的数组
 class Req {
  public:
+  explicit Req(std::vector<std::string> pieces = {})
+      : pieces_(std::move(pieces)) {}
+
   [[nodiscard]] const auto& pieces() const { return pieces_; }
   [[nodiscard]] auto& pieces() { return pieces_; }
 
  private:
-  std::vector<BulkStringPiece> pieces_;
+  std::vector<std::string> pieces_;
 };
 
+// 将 Req 的字符串表示形式写入 std::ostream，用于 fmt 库
 inline static std::ostream& operator<<(std::ostream& os, const Req& req) {
   os << '(';
   for (size_t i = 0; i < req.pieces().size(); i++) {
-    os << '\'' << req.pieces()[i].value() << '\'';
+    os << '\'' << req.pieces()[i] << '\'';
     if (i != req.pieces().size() - 1) {
       os << ", ";
     }
@@ -46,6 +48,6 @@ inline static std::ostream& operator<<(std::ostream& os, const Req& req) {
   return os;
 }
 
-}  // namespace mydss
+}  // namespace mydss::proto
 
-#endif  // MYDSS_INCLUDE_RESP_REQ_HPP_
+#endif  // MYDSS_INCLUDE_PROTO_REQ_HPP_

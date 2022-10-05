@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_STATUS_HPP_
-#define MYDSS_INCLUDE_STATUS_HPP_
+#ifndef MYDSS_INCLUDE_ERR_STATUS_HPP_
+#define MYDSS_INCLUDE_ERR_STATUS_HPP_
 
-#include <fmt/core.h>
 #include <fmt/ostream.h>
 
 #include <string>
 
-namespace mydss {
+#include "code.hpp"
 
-static constexpr int kOk = 0;
-static constexpr int kBadReq = 1;
+namespace mydss::err {
 
+// 错误码
 class Status {
  public:
   Status(int code, std::string msg) : code_(code), msg_(std::move(msg)) {}
@@ -35,18 +34,18 @@ class Status {
   [[nodiscard]] bool ok() const { return code_ == kOk; }
   [[nodiscard]] bool error() const { return code_ != kOk; }
 
-  static Status Ok() { return Status(0, "ok"); }
+  static Status Ok() { return Status(kOk, "ok"); }
 
  private:
-  int code_;
-  std::string msg_;
+  int code_;         // 错误码
+  std::string msg_;  // 错误信息
 };
 
 inline static std::ostream& operator<<(std::ostream& os, const Status& status) {
-  os << fmt::format("(status:{}) {}", status.code(), status.msg());
+  os << "(status:" << status.code() << ") " << status.msg();
   return os;
 }
 
-}  // namespace mydss
+}  // namespace mydss::err
 
-#endif  // MYDSS_INCLUDE_STATUS_HPP_
+#endif  // MYDSS_INCLUDE_ERR_STATUS_HPP_
