@@ -31,7 +31,7 @@ class TimeWheel {
  public:
   using Item = typename std::pair<std::string, std::time_t>;
 
-  TimeWheel(std::size_t interval, std::size_t slot_num)
+  TimeWheel(size_t interval, size_t slot_num)
       : slots_(slot_num), interval_(interval) {
     assert(interval);
   }
@@ -41,18 +41,18 @@ class TimeWheel {
 
  private:
   std::vector<std::list<Item>> slots_;
-  std::size_t interval_;
+  size_t interval_;
 };
 
 inline void TimeWheel::Add(std::string key, std::time_t expire) {
-  std::size_t index = expire / interval_ / slots_.size();
+  size_t index = expire / interval_ / slots_.size();
   slots_[index].push_back({std::move(key), expire});
 }
 
 inline std::list<TimeWheel::Item> TimeWheel::Timeout() {
   std::list<Item> expired;
   std::time_t now = time(nullptr);
-  std::size_t index = (now / interval_ - 1) % slots_.size();
+  size_t index = (now / interval_ - 1) % slots_.size();
   auto& slot = slots_[index];
   auto it = slot.cbegin();
   while (it != slot.cend()) {

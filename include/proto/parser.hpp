@@ -53,10 +53,10 @@ class BulkStringParser {
   };
 
  private:
-  State state_;               // 解析器的内部状态
-  std::string value_;         // bulk string  的值
-  std::uint64_t target_len_;  // 期待的 bulk string 长度
-  std::uint64_t cur_len_;     // 当前已经读取到的 bulk string 的长度
+  State state_;          // 解析器的内部状态
+  std::string value_;    // bulk string  的值
+  uint64_t target_len_;  // 期待的 bulk string 长度
+  uint64_t cur_len_;     // 当前已经读取到的 bulk string 的长度
 };
 
 // 解析请求

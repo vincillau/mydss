@@ -27,8 +27,8 @@
 
 namespace mydss {
 
-constexpr std::size_t kTimeInterval = 5;
-constexpr std::size_t kSlotNum = 12;
+constexpr size_t kTimeInterval = 5;
+constexpr size_t kSlotNum = 12;
 
 class Db {
  public:

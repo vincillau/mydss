@@ -32,7 +32,7 @@ namespace mydss {
 
 class Object {
  public:
-  using Int = std::int64_t;
+  using Int = int64_t;
   using Raw = std::string;
   using List = typename std::list<std::string>;
   using Hash = typename std::unordered_map<std::string, std::string>;
@@ -205,8 +205,8 @@ inline double Object::ttl() const {
 }
 
 inline void Object::set_ttl(double ttl) {
-  std::int64_t sec = static_cast<std::int64_t>(ttl);
-  std::int64_t usec = static_cast<std::int64_t>((ttl - sec) * 1000.0 * 1000.0);
+  int64_t sec = static_cast<int64_t>(ttl);
+  int64_t usec = static_cast<int64_t>((ttl - sec) * 1000.0 * 1000.0);
   timeval now;
   gettimeofday(&now, nullptr);
   now.tv_sec += sec;
