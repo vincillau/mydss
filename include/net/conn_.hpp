@@ -42,6 +42,8 @@ class Conn : public std::enable_shared_from_this<Conn> {
   // 异步接收数据，将接收到的数据存储到 buf，并调用 handler
   void AsyncRecv(util::Buf buf, RecvHandler handler);
 
+  // 发送 buf 中的数据，在发送完成后调用 handler
+  // 调用者需要保证至少在调用 handler 前 buf 底层的内存不被释放
   void AsyncSend(const util::Buf& buf, SendHandler handler);
 
   // 在建立连接时调用，将设置连接套接字 sock 和远程的地址
@@ -69,7 +71,7 @@ class Conn : public std::enable_shared_from_this<Conn> {
   util::Buf recv_buf_;
   // 处理读事件的 handler
   RecvHandler recv_handler_;
-  std::list<SendHandler> send_handlers_;
+  std::list<std::pair<const util::Buf&, SendHandler>> send_queue_;
 };
 
 }  // namespace mydss::net

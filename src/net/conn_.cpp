@@ -65,7 +65,32 @@ void Conn::AsyncRecv(Buf buf, RecvHandler handler) {
   recv_buf_ = buf;
 }
 
-void Conn::AsyncSend(const Buf& buf, SendHandler handler) {}
+void Conn::AsyncSend(const Buf& buf, SendHandler handler) {
+  assert(handler);
+
+  if (send_queue_.size() > 0) {
+    // 套接字写缓冲区已满，直接追加到发送队列
+    send_queue_.push_back({buf, std::move(handler)});
+  }
+
+  // 尝试发送
+  int nbytes = write(sock_, buf.data(), buf.len());
+  if (nbytes == buf.len()) {
+    // 发送成功
+    handler(kOk, nbytes);
+    return;
+  }
+  if (errno != EAGAIN) {
+    // 发送失败
+    // TODO(Vincil Lau): 暂时使用 errno 作为错误码
+    handler(errno, nbytes);
+    return;
+  }
+
+  // 套接字写缓冲区已满，开始监听写事件
+  loop_->SetWriteHandler(sock_, bind(&Conn::OnSend, shared_from_this()));
+  send_queue_.push_back({buf, std::move(handler)});
+}
 
 void Conn::OnRecv(shared_ptr<Conn> conn) {
   assert(conn->recv_handler_);
@@ -73,17 +98,39 @@ void Conn::OnRecv(shared_ptr<Conn> conn) {
 
   int nbytes = read(conn->sock_, conn->recv_buf_.data(), conn->recv_buf_.len());
   int code = kOk;
-  if (nbytes == 0) {
-    code = kEof;
-  } else if (nbytes == -1) {
-    code = kUnknown;
-  }
+  code = (nbytes == 0) ? kEof : code;
+  code = (nbytes == -1) ? kUnknown : code;
 
   // 每次触发读事件后移除 recv_handler_
   auto handler = std::move(conn->recv_handler_);
   handler(code, nbytes);
 }
 
-void Conn::OnSend(shared_ptr<Conn> conn) {}
+void Conn::OnSend(shared_ptr<Conn> conn) {
+  assert(conn->send_queue_.size() > 0);
+
+  while (conn->send_queue_.size() > 0) {
+    const Buf& buf = conn->send_queue_.front().first;
+    const SendHandler& handler = std::move(conn->send_queue_.front().second);
+
+    int nbytes = write(conn->sock_, buf.data(), buf.len());
+    if (nbytes == buf.len()) {
+      handler(kOk, nbytes);
+      conn->send_queue_.pop_front();
+      continue;
+    }
+    if (errno != EAGAIN) {
+      // TODO(Vincil Lau): 暂时使用 errno 作为错误码
+      handler(errno, nbytes);
+      conn->send_queue_.pop_front();
+      continue;
+    }
+    // 尚未发送完毕，等待下一个写事件
+    return;
+  }
+
+  // 发送完毕，停止监听写事件
+  conn->loop_->SetWriteHandler(conn->sock_, {});
+}
 
 }  // namespace mydss::net
