@@ -17,5 +17,3 @@ target("test_main")
     set_group("test")
     add_files("test_main.cpp")
     add_packages("fmt", "gtest", "spdlog")
-
-includes("net")

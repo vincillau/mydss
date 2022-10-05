@@ -26,9 +26,9 @@ constexpr size_t kErrnoStrBufLen = 64;
 
 // 线程安全版本的 str_errno
 inline static std::string ErrnoStr() {
-  char buf[kErrnoStrBufLen];
-  strerror_r(errno, buf, kErrnoStrBufLen);
-  return {buf};
+  char buf[kErrnoStrBufLen] = {};
+  const char* err_str = strerror_r(errno, buf, kErrnoStrBufLen);
+  return {err_str};
 }
 
 }  // namespace mydss::err

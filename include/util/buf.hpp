@@ -12,24 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gtest/gtest.h>
+#ifndef MYDSS_INCLUDE_UTIL_BUF_HPP_
+#define MYDSS_INCLUDE_UTIL_BUF_HPP_
 
-#include <net/loop.hpp>
+#include <cstddef>
 
-namespace mydss::net {
+namespace mydss::util {
 
-// 测试 Loop 的构造函数
-TEST(TestLoop, New) {
-  auto loop = Loop::New();
-  EXPECT_GE(loop->epfd_, 0);
-  EXPECT_TRUE(loop->fd_cbs_map_.empty());
-}
+class Buf {
+ public:
+  Buf() : data_(nullptr), len_(0) {}
+  Buf(char* data, size_t len) : data_(data), len_(len) {}
 
-// 当事件循环中没有需要监听的文件时 Loop::Run 应该返回
-TEST(TestLoop, RunExit) {
-  auto loop = Loop::New();
-  loop->Run();
-  SUCCEED();
-}
+  [[nodiscard]] const char* data() const { return data_; }
+  [[nodiscard]] char* data() { return data_; }
+  [[nodiscard]] auto len() const { return len_; }
 
-}  // namespace mydss::net
+ private:
+  char* data_;
+  size_t len_;
+};
+
+}  // namespace mydss::util
+
+#endif  // MYDSS_INCLUDE_UTIL_BUF_HPP_

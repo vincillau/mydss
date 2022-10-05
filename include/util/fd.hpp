@@ -19,7 +19,7 @@ namespace mydss::util {
 
 // 将文件描述符设置非阻塞模式
 // 若成功返回 true，否则返回 false 并设置 errno
-bool FdSetNonblock(int fd);
+bool FdSetNonBlock(int fd);
 
 }  // namespace mydss::util
 

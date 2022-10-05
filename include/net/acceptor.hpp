@@ -34,6 +34,11 @@ class Acceptor : public std::enable_shared_from_this<Acceptor> {
     return std::shared_ptr<Acceptor>(new Acceptor(loop, std::move(addr)));
   }
 
+  void Start() {
+    Bind();
+    Listen();
+  }
+
   // 异步接收连接
   void AsyncAccept(std::shared_ptr<Conn> conn, AcceptHandler handler);
 
@@ -41,14 +46,19 @@ class Acceptor : public std::enable_shared_from_this<Acceptor> {
   // 创建监听 addr 的 Acceptor
   Acceptor(std::shared_ptr<Loop> loop, Addr addr);
 
+  void Bind();
+  void Listen();
+  bool Accept(std::shared_ptr<Conn> conn);
+
   // 处理可以建立连接的事件
-  static void OnAccept(std::shared_ptr<Acceptor> acceptor,
-                       std::shared_ptr<Conn> conn, AcceptHandler handler);
+  static void OnAccept(std::shared_ptr<Acceptor> acceptor);
 
  private:
   std::shared_ptr<Loop> loop_;
   Addr addr_;
   int listen_fd_;
+  AcceptHandler handler_;
+  std::shared_ptr<Conn> conn_;
 };
 
 }  // namespace mydss::net
