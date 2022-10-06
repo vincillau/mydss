@@ -14,11 +14,13 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cmd/generic.hpp>
 #include <cmd/string.hpp>
 #include <db/inst.hpp>
 #include <util/str.hpp>
 
 using fmt::format;
+using mydss::cmd::Generic;
 using mydss::cmd::String;
 using mydss::proto::ErrorPiece;
 using mydss::proto::Piece;
@@ -39,6 +41,22 @@ void Inst::Init(int db_num) {
   // String
   inst_->RegisterCmd("GET", String::Get);
   inst_->RegisterCmd("SET", String::Set);
+
+  // Generic
+  inst_->RegisterCmd("DEL", Generic::Del);
+  inst_->RegisterCmd("EXISTS", Generic::Exists);
+  inst_->RegisterCmd("EXPIRE", Generic::Expire);
+  inst_->RegisterCmd("EXPIREAT", Generic::ExpireAt);
+  inst_->RegisterCmd("OBJECT", Generic::Object);
+  inst_->RegisterCmd("PERSIST", Generic::Persist);
+  inst_->RegisterCmd("PEXPIRE", Generic::PExpire);
+  inst_->RegisterCmd("PEXPIREAT", Generic::PExpireAt);
+  inst_->RegisterCmd("PTTL", Generic::Pttl);
+  inst_->RegisterCmd("RENAME", Generic::Rename);
+  inst_->RegisterCmd("RENAMENX", Generic::RenameNX);
+  inst_->RegisterCmd("TOUCH", Generic::Touch);
+  inst_->RegisterCmd("TTL", Generic::Ttl);
+  inst_->RegisterCmd("TYPE", Generic::Type);
 }
 
 shared_ptr<Object> Inst::GetObject(const string& key, int db) {
@@ -69,12 +87,15 @@ void Inst::SetObject(string key, shared_ptr<Object> obj, int db) {
     db = cur_db_;
   }
   assert(db >= 0 && db < dbs_.size());
+  dbs_[db].objs()[std::move(key)] = obj;
+}
 
+int Inst::DeleteObject(const string& key, int db) {
   if (db == -1) {
     db = cur_db_;
   }
-
-  dbs_[db].objs()[std::move(key)] = obj;
+  assert(db >= 0 && db < dbs_.size());
+  return dbs_[db].objs().erase(key);
 }
 
 void Inst::RegisterCmd(string name, Cmd cmd) {

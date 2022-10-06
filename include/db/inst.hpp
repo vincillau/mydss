@@ -36,6 +36,7 @@ class Inst {
   [[nodiscard]] std::shared_ptr<Object> GetObject(const std::string& key,
                                                   int db = -1);
   void SetObject(std::string key, std::shared_ptr<Object> obj, int db = -1);
+  int DeleteObject(const std::string& key, int db = -1);
 
   void RegisterCmd(std::string name, Cmd cmd);
   void Handle(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);

@@ -35,7 +35,9 @@ class Object {
   [[nodiscard]] virtual std::string EncodingStr() const = 0;
 
   [[nodiscard]] auto access_time() const { return access_time_; }
-  [[nodiscard]] auto IdleTime() const;
+  [[nodiscard]] auto IdleTime() const {
+    return util::TimeInMsec() - access_time_;
+  }
   void Touch() { access_time_ = util::TimeInMsec(); }
 
   [[nodiscard]] auto expire_time() const { return expire_time_; }
