@@ -41,8 +41,8 @@ class Object {
   void Touch() { access_time_ = util::TimeInMsec(); }
 
   [[nodiscard]] auto expire_time() const { return expire_time_; }
-  [[nodiscard]] int64_t Pttl() const;
-  void SetPttl(int64_t msec);
+  [[nodiscard]] int64_t PTtl() const;
+  void SetPTtl(int64_t msec);
 
  private:
   uint16_t type_;
@@ -51,7 +51,7 @@ class Object {
   int64_t expire_time_;
 };
 
-inline int64_t Object::Pttl() const {
+inline int64_t Object::PTtl() const {
   if (expire_time_ == INT64_MAX) {
     return -1;
   }
@@ -62,7 +62,7 @@ inline int64_t Object::Pttl() const {
   return expire_time_ - now;
 }
 
-inline void Object::SetPttl(int64_t msec) {
+inline void Object::SetPTtl(int64_t msec) {
   assert(msec >= -1);
   if (msec == -1) {
     expire_time_ = INT64_MAX;

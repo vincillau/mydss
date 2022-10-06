@@ -43,7 +43,7 @@ class Generic {
                       std::shared_ptr<proto::Piece>& resp);
   static void PExpireAt(const proto::Req& req,
                         std::shared_ptr<proto::Piece>& resp);
-  static void Pttl(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void PTtl(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
   static void Rename(const proto::Req& req,
                      std::shared_ptr<proto::Piece>& resp);
   static void RenameNX(const proto::Req& req,

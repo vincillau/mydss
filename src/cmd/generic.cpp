@@ -118,14 +118,14 @@ static void SetExpire(const string& cmd, const Req& req,
     resp = make_shared<IntegerPiece>(0);
     return;
   }
-  int64_t old_pttl = obj->Pttl();
+  int64_t old_pttl = obj->PTtl();
 
   if (nx) {
     if (old_pttl > 0) {
       // 有过期时间则不设置
       resp = make_shared<IntegerPiece>(0);
     } else {
-      obj->SetPttl(new_pttl);
+      obj->SetPTtl(new_pttl);
       resp = make_shared<IntegerPiece>(1);
     }
     return;
@@ -139,7 +139,7 @@ static void SetExpire(const string& cmd, const Req& req,
       // XX 和 GT
       if (gt) {
         if (new_pttl > old_pttl) {
-          obj->SetPttl(new_pttl);
+          obj->SetPTtl(new_pttl);
           resp = make_shared<IntegerPiece>(1);
 
         } else {
@@ -149,7 +149,7 @@ static void SetExpire(const string& cmd, const Req& req,
       // XX 和 LT
       else if (lt) {
         if (new_pttl < old_pttl) {
-          obj->SetPttl(new_pttl);
+          obj->SetPTtl(new_pttl);
           resp = make_shared<IntegerPiece>(1);
         } else {
           resp = make_shared<IntegerPiece>(0);
@@ -157,7 +157,7 @@ static void SetExpire(const string& cmd, const Req& req,
       }
       // 只有 XX
       else {
-        obj->SetPttl(new_pttl);
+        obj->SetPTtl(new_pttl);
         resp = make_shared<IntegerPiece>(1);
       }
     }
@@ -167,7 +167,7 @@ static void SetExpire(const string& cmd, const Req& req,
   // 只有 GT
   if (gt) {
     if (new_pttl > old_pttl) {
-      obj->SetPttl(new_pttl);
+      obj->SetPTtl(new_pttl);
       resp = make_shared<IntegerPiece>(1);
 
     } else {
@@ -177,7 +177,7 @@ static void SetExpire(const string& cmd, const Req& req,
   // 只有 LT
   else if (lt) {
     if (new_pttl < old_pttl) {
-      obj->SetPttl(new_pttl);
+      obj->SetPTtl(new_pttl);
       resp = make_shared<IntegerPiece>(1);
     } else {
       resp = make_shared<IntegerPiece>(0);
@@ -185,7 +185,7 @@ static void SetExpire(const string& cmd, const Req& req,
   }
   // 没有选项
   else {
-    obj->SetPttl(new_pttl);
+    obj->SetPTtl(new_pttl);
     resp = make_shared<IntegerPiece>(1);
   }
 }
@@ -328,13 +328,13 @@ void Generic::Persist(const Req& req, shared_ptr<Piece>& resp) {
     return;
   }
 
-  int64_t pttl = obj->Pttl();
+  int64_t pttl = obj->PTtl();
   if (pttl == -1) {
     resp = make_shared<IntegerPiece>(0);
     return;
   }
 
-  obj->SetPttl(-1);
+  obj->SetPTtl(-1);
   resp = make_shared<IntegerPiece>(1);
 }
 
@@ -346,7 +346,7 @@ void Generic::PExpireAt(const Req& req, shared_ptr<Piece>& resp) {
   SetExpire("pexpireat", req, resp);
 }
 
-void Generic::Pttl(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::PTtl(const Req& req, shared_ptr<Piece>& resp) {
   // 检查参数
   if (req.pieces().size() != 2) {
     resp =
@@ -361,7 +361,7 @@ void Generic::Pttl(const Req& req, shared_ptr<Piece>& resp) {
     return;
   }
 
-  int64_t pttl = obj->Pttl();
+  int64_t pttl = obj->PTtl();
   if (pttl == -1) {
     resp = make_shared<IntegerPiece>(-1);
   } else {
@@ -459,7 +459,7 @@ void Generic::Ttl(const Req& req, shared_ptr<Piece>& resp) {
     return;
   }
 
-  int64_t pttl = obj->Pttl();
+  int64_t pttl = obj->PTtl();
   if (pttl == -1) {
     resp = make_shared<IntegerPiece>(-1);
   } else {

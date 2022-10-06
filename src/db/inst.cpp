@@ -51,7 +51,7 @@ void Inst::Init(int db_num) {
   inst_->RegisterCmd("PERSIST", Generic::Persist);
   inst_->RegisterCmd("PEXPIRE", Generic::PExpire);
   inst_->RegisterCmd("PEXPIREAT", Generic::PExpireAt);
-  inst_->RegisterCmd("PTTL", Generic::Pttl);
+  inst_->RegisterCmd("PTTL", Generic::PTtl);
   inst_->RegisterCmd("RENAME", Generic::Rename);
   inst_->RegisterCmd("RENAMENX", Generic::RenameNX);
   inst_->RegisterCmd("TOUCH", Generic::Touch);
@@ -74,7 +74,7 @@ shared_ptr<Object> Inst::GetObject(const string& key, int db) {
 
   // 检查是否过期
   auto& obj = it->second;
-  if (obj->Pttl() == 0) {
+  if (obj->PTtl() == 0) {
     objs.erase(it);
     return nullptr;
   }
