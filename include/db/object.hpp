@@ -23,13 +23,8 @@ namespace mydss::db {
 
 class Object {
  public:
-  static constexpr uint16_t kUnknownType = 0;
-  static constexpr uint16_t kUnknownEncoding = 0;
-
-  Object()
-      : type_(kUnknownType),
-        encoding_(kUnknownEncoding),
-        expire_time_(INT64_MAX) {
+  Object(uint16_t type, uint16_t encoding)
+      : type_(type), encoding_(encoding), expire_time_(INT64_MAX) {
     Touch();
   }
 

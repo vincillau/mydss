@@ -38,6 +38,8 @@ inline static void StrLower(std::string& str) {
   return 1 + U64StrLen(-i64);
 }
 
+[[nodiscard]] bool StrToI64(const std::string& str, int64_t* result);
+
 }  // namespace mydss::util
 
 #endif  // MYDSS_INCLUDE_UTIL_STR_HPP_

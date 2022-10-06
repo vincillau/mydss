@@ -19,6 +19,7 @@
 #include <util/str.hpp>
 
 using fmt::format;
+using mydss::cmd::String;
 using mydss::proto::ErrorPiece;
 using mydss::proto::Piece;
 using mydss::proto::Req;
@@ -36,8 +37,44 @@ void Inst::Init(int db_num) {
   inst_ = shared_ptr<Inst>(new Inst(db_num));
 
   // String
-  inst_->RegisterCmd("GET", cmd::Get);
-  inst_->RegisterCmd("SET", cmd::Set);
+  inst_->RegisterCmd("GET", String::Get);
+  inst_->RegisterCmd("SET", String::Set);
+}
+
+shared_ptr<Object> Inst::GetObject(const string& key, int db) {
+  if (db == -1) {
+    db = cur_db_;
+  }
+  assert(db >= 0 && db < dbs_.size());
+
+  // 检查是否存在
+  auto& objs = dbs_[db].objs();
+  auto it = objs.find(key);
+  if (it == objs.end()) {
+    return nullptr;
+  }
+
+  // 检查是否过期
+  auto& obj = it->second;
+  if (obj->Pttl() == 0) {
+    objs.erase(it);
+    return nullptr;
+  }
+
+  return obj;
+}
+
+void Inst::SetObject(string key, shared_ptr<Object> obj, int db) {
+  if (db == -1) {
+    db = cur_db_;
+  }
+  assert(db >= 0 && db < dbs_.size());
+
+  if (db == -1) {
+    db = cur_db_;
+  }
+
+  dbs_[db].objs()[std::move(key)] = obj;
 }
 
 void Inst::RegisterCmd(string name, Cmd cmd) {

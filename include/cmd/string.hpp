@@ -16,13 +16,53 @@
 #define MYDSS_INCLUDE_CMD_STRING_HPP_
 
 #include <db/object.hpp>
+#include <db/type.hpp>
 #include <proto/piece.hpp>
 #include <proto/req.hpp>
+#include <variant>
 
 namespace mydss::cmd {
 
-void Set(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
-void Get(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+class String : public db::Object {
+ public:
+  String(std::string value) : Object(db::type::kString, db::encoding::kRaw) {
+    SetValue(std::move(value));
+  }
+
+  [[nodiscard]] uint16_t Type() const override { return db::type::kString; }
+  [[nodiscard]] std::string TypeStr() const override { return "string"; }
+
+  [[nodiscard]] uint16_t Encoding() const override { return encoding_; }
+  [[nodiscard]] std::string EncodingStr() const override;
+
+  [[nodiscard]] int64_t I64() const {
+    assert(encoding_ == db::encoding::kInt);
+    return std::get<int64_t>(value_);
+  }
+  [[nodiscard]] const std::string& Str() const {
+    assert(encoding_ == db::encoding::kRaw);
+    return std::get<std::string>(value_);
+  }
+  void SetValue(std::string value);
+
+ public:
+  static void Set(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void Get(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+
+ private:
+  std::variant<std::string, int64_t> value_;
+  uint16_t encoding_;
+};
+
+inline std::string String::EncodingStr() const {
+  if (encoding_ == db::encoding::kInt) {
+    return "int";
+  }
+  if (encoding_ == db::encoding::kRaw) {
+    return "raw";
+  }
+  assert(false);
+}
 
 }  // namespace mydss::cmd
 

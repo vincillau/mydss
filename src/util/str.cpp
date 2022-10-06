@@ -14,6 +14,8 @@
 
 #include <util/str.hpp>
 
+using std::string;
+
 namespace mydss::util {
 
 size_t U64StrLen(uint64_t u64) {
@@ -27,6 +29,47 @@ size_t U64StrLen(uint64_t u64) {
     len++;
   }
   return len;
+}
+
+bool StrToI64(const string& str, int64_t* result) {
+  if (str.empty()) {
+    return false;
+  }
+
+  int64_t i64 = 0;
+  size_t index = 0;
+  int sign = 1;
+
+  if (str[0] == '-') {
+    if (str.size() == 1) {
+      return false;
+    }
+    index = 1;
+    sign = -1;
+  }
+
+  for (; index < str.size(); index++) {
+    char ch = str[index];
+    if (ch < '0' || ch > '9') {
+      return false;
+    }
+
+    // 检查是否会溢出
+    if (i64 > INT64_MAX / 10) {
+      return false;
+    }
+    i64 *= 10;
+
+    int digit = ch - '0';
+    // 检查是否会溢出
+    if (INT64_MAX - i64 < digit) {
+      return false;
+    }
+    i64 += digit;
+  }
+
+  *result = i64;
+  return true;
 }
 
 }  // namespace mydss::util

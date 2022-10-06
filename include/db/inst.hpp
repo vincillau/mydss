@@ -33,8 +33,9 @@ class Inst {
   static void Init(int db_num);
   static std::shared_ptr<Inst> GetInst() { return inst_; }
 
-  // 获取当前的数据库
-  [[nodiscard]] Db& CurDb() { return dbs_[cur_db_]; }
+  [[nodiscard]] std::shared_ptr<Object> GetObject(const std::string& key,
+                                                  int db = -1);
+  void SetObject(std::string key, std::shared_ptr<Object> obj, int db = -1);
 
   void RegisterCmd(std::string name, Cmd cmd);
   void Handle(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
@@ -52,4 +53,4 @@ class Inst {
 
 }  // namespace mydss::db
 
-#endif // MYDSS_INCLUDE_DB_INST_HPP_
+#endif  // MYDSS_INCLUDE_DB_INST_HPP_
