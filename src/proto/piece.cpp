@@ -13,91 +13,152 @@
 // limitations under the License.
 
 #include <cassert>
+#include <cstring>
 #include <proto/piece.hpp>
+#include <util/str.hpp>
 
+using mydss::util::I64StrLen;
+using mydss::util::U64StrLen;
 using std::to_string;
 
 namespace mydss::proto {
 
-size_t SimpleStringPiece::size() const {
-  size_t result = 1;        // 表示类型的字符
-  result += value_.size();  // 字符串
-  result += 2;              // \r\n
+size_t SimpleStringPiece::Size() const {
+  size_t result = 1;
+  result += value_.size();
+  result += 2;
   return result;
 }
 
-void SimpleStringPiece::Serialize(std::string& buf) const {
-  buf.push_back('+');
-  buf += value_;
-  buf += "\r\n";
+size_t SimpleStringPiece::Serialize(char* buf, size_t len) const {
+  assert(len >= Size());
+
+  buf[0] = '+';
+  size_t offset = 1;
+  memcpy(buf + 1, value_.c_str(), value_.size());
+  offset += value_.size();
+  buf[offset] = '\r';
+  buf[offset + 1] = '\n';
+  offset += 2;
+
+  assert(offset == Size());
+  return offset;
 }
 
-size_t ErrorPiece::size() const {
-  size_t result = 1;        // 表示类型的字符
-  result += value_.size();  // 字符串
-  result += 2;              // \r\n
+size_t ErrorPiece::Size() const {
+  size_t result = 1;
+  result += value_.size();
+  result += 2;
   return result;
 }
 
-void ErrorPiece::Serialize(std::string& buf) const {
-  buf.push_back('-');
-  buf += value_;
-  buf += "\r\n";
+size_t ErrorPiece::Serialize(char* buf, size_t len) const {
+  assert(len >= Size());
+
+  buf[0] = '-';
+  size_t offset = 1;
+  memcpy(buf + 1, value_.c_str(), value_.size());
+  offset += value_.size();
+  buf[offset] = '\r';
+  buf[offset + 1] = '\n';
+  offset += 2;
+
+  assert(offset == Size());
+  return offset;
 }
 
-size_t IntegerPiece::size() const {
-  size_t result = 1;                   // 表示类型的字符
-  result += to_string(value_).size();  // 转换为字符串后的长度
-  result += 2;                         // \r\n
+size_t IntegerPiece::Size() const {
+  size_t result = 1;
+  result += I64StrLen(value_);
+  result += 2;
   return result;
 }
 
-void IntegerPiece::Serialize(std::string& buf) const {
-  buf.push_back(':');
-  buf += to_string(value_);
-  buf += "\r\n";
+size_t IntegerPiece::Serialize(char* buf, size_t len) const {
+  assert(len >= Size());
+
+  auto i64_str = to_string(value_);
+  buf[0] = ':';
+  size_t offset = 1;
+  memcpy(buf + 1, i64_str.c_str(), i64_str.size());
+  offset += i64_str.size();
+  buf[offset] = '\r';
+  buf[offset + 1] = '\n';
+  offset += 2;
+
+  assert(offset == Size());
+  return offset;
 }
 
-size_t BulkStringPiece::size() const {
+size_t BulkStringPiece::Size() const {
   if (null_) {
     // "$-1\r\n"
     return 5;
   }
 
-  size_t result = 1;                          // 表示类型的字符
-  result += to_string(value_.size()).size();  // 长度
-  result += 2;                                // \r\n
-  result += value_.size();                    // 字符串
-  result += 2;                                // \r\n
+  size_t result = 1;
+  result += U64StrLen(value_.size());
+  result += 2;
+  result += value_.size();
+  result += 2;
   return result;
 }
 
-void BulkStringPiece::Serialize(std::string& buf) const {
-  buf.push_back('$');
-  buf += to_string(value_.size());
-  buf += "\r\n";
-  buf += value_;
-  buf += "\r\n";
+size_t BulkStringPiece::Serialize(char* buf, size_t len) const {
+  assert(len >= Size());
+
+  if (null_) {
+    memcpy(buf, "$-1\r\n", 5);
+    return 5;
+  }
+
+  buf[0] = '$';
+  size_t offset = 1;
+  auto len_str = to_string(value_.size());
+  memcpy(buf + 1, len_str.c_str(), len_str.size());
+  offset += len_str.size();
+  buf[offset] = '\r';
+  buf[offset + 1] = '\n';
+  offset += 2;
+
+  memcpy(buf + offset, value_.c_str(), value_.size());
+  offset += value_.size();
+  buf[offset] = '\r';
+  buf[offset + 1] = '\n';
+  offset += 2;
+
+  assert(offset == Size());
+  return offset;
 }
 
-size_t ArrayPiece::size() const {
-  size_t result = 1;                           // 表示类型的字符
-  result += to_string(pieces_.size()).size();  // 长度
-  result += 2;                                 // \r\n
+size_t ArrayPiece::Size() const {
+  size_t result = 1;
+  result += U64StrLen(pieces_.size());
+  result += 2;
   for (const auto& piece : pieces_) {
-    result += piece->size();
+    result += piece->Size();
   }
   return result;
 }
 
-void ArrayPiece::Serialize(std::string& buf) const {
-  buf.reserve(size());
-  buf.push_back('*');
-  buf += to_string(pieces_.size());
-  buf += "\r\n";
+size_t ArrayPiece::Serialize(char* buf, size_t len) const {
+  assert(len >= Size());
+
+  buf[0] = '*';
+  size_t offset = 1;
+  auto len_str = to_string(pieces_.size());
+  memcpy(buf + 1, len_str.c_str(), len_str.size());
+  offset += len_str.size();
+  buf[offset] = '\r';
+  buf[offset + 1] = '\n';
+  offset += 2;
+
   for (const auto& piece : pieces_) {
-    piece->Serialize(buf);
+    offset += piece->Serialize(buf + offset, len - offset);
   }
+
+  assert(offset == Size());
+  return offset;
 }
 
 }  // namespace mydss::proto

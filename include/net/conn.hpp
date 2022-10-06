@@ -57,7 +57,7 @@ class Conn : public std::enable_shared_from_this<Conn> {
 
   // 处理读事件，读取数据到 buf，并调用 handler
   static void OnRecv(std::shared_ptr<Conn> conn);
-
+  // 处理写事件
   static void OnSend(std::shared_ptr<Conn> conn);
 
  private:
@@ -71,6 +71,7 @@ class Conn : public std::enable_shared_from_this<Conn> {
   util::Buf recv_buf_;
   // 处理读事件的 handler
   RecvHandler recv_handler_;
+  // 发送请求队列
   std::list<std::pair<const util::Buf&, SendHandler>> send_queue_;
 };
 

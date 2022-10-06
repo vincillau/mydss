@@ -12,26 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_DB_DB_HPP_
-#define MYDSS_INCLUDE_DB_DB_HPP_
+#include <cmd/string.hpp>
 
-#include <memory>
-#include <string>
-#include <unordered_map>
+using mydss::proto::BulkStringPiece;
+using mydss::proto::Piece;
+using mydss::proto::Req;
+using mydss::proto::SimpleStringPiece;
+using std::make_shared;
+using std::shared_ptr;
 
-#include "object.hpp"
+namespace mydss::cmd {
 
-namespace mydss::db {
+void Set(const Req& req, shared_ptr<Piece>& resp) {
+  resp = make_shared<BulkStringPiece>("OK");
+}
 
-class Db {
- public:
-  [[nodiscard]] const auto& objs() const { return objs_; }
-  [[nodiscard]] auto& objs() { return objs_; }
+void Get(const Req& req, shared_ptr<Piece>& resp) {
+  resp = make_shared<SimpleStringPiece>("abc");
+}
 
- private:
-  std::unordered_map<std::string, std::shared_ptr<Object>> objs_;
-};
-
-}  // namespace mydss::db
-
-#endif // MYDSS_INCLUDE_DB_DB_HPP_
+}  // namespace mydss::cmd

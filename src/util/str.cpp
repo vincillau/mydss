@@ -12,20 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_COMMAND_STRING_HPP_
-#define MYDSS_INCLUDE_COMMAND_STRING_HPP_
+#include <util/str.hpp>
 
-#include <instance.hpp>
-#include <resp/req.hpp>
-#include <status.hpp>
+namespace mydss::util {
 
-namespace mydss ::string {
+size_t U64StrLen(uint64_t u64) {
+  if (u64 == 0) {
+    return 1;
+  }
 
-[[nodiscard]] Status Set(Instance& inst, const Req& req,
-                         std::shared_ptr<Piece>& piece);
-[[nodiscard]] Status Get(Instance& inst, const Req& req,
-                         std::shared_ptr<Piece>& piece);
+  size_t len = 0;
+  while (u64 != 0) {
+    u64 /= 10;
+    len++;
+  }
+  return len;
+}
 
-}  // namespace mydss::string
-
-#endif // MYDSS_INCLUDE_COMMAND_STRING_HPP_
+}  // namespace mydss::util

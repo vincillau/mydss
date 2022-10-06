@@ -98,13 +98,16 @@ void Conn::OnRecv(shared_ptr<Conn> conn) {
   assert(conn->recv_buf_.data() != nullptr);
 
   int nbytes = read(conn->sock_, conn->recv_buf_.data(), conn->recv_buf_.len());
-  int code = kOk;
-  code = (nbytes == 0) ? kEof : code;
-  code = (nbytes == -1) ? kUnknown : code;
-
   // 每次触发读事件后移除 recv_handler_
   auto handler = std::move(conn->recv_handler_);
-  handler(code, nbytes);
+
+  if (nbytes > 0) {
+    handler(kOk, nbytes);
+  } else if (nbytes == 0) {
+    handler(kEof, nbytes);
+  } else {
+    handler(kUnknown, nbytes);
+  }
 }
 
 void Conn::OnSend(shared_ptr<Conn> conn) {

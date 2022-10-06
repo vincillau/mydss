@@ -12,26 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_DB_DB_HPP_
-#define MYDSS_INCLUDE_DB_DB_HPP_
+#ifndef MYDSS_INCLUDE_UTIL_STR_HPP_
+#define MYDSS_INCLUDE_UTIL_STR_HPP_
 
-#include <memory>
 #include <string>
-#include <unordered_map>
 
-#include "object.hpp"
+namespace mydss::util {
 
-namespace mydss::db {
-
-class Db {
- public:
-  [[nodiscard]] const auto& objs() const { return objs_; }
-  [[nodiscard]] auto& objs() { return objs_; }
-
- private:
-  std::unordered_map<std::string, std::shared_ptr<Object>> objs_;
+inline static void StrLower(std::string& str) {
+  for (char& ch : str) {
+    if (ch >= 'A' && ch <= 'Z') {
+      ch = ch - 'A' + 'a';
+    }
+  }
 };
 
-}  // namespace mydss::db
+// 计算 uint64_t 转换为字符串后的长度
+[[nodiscard]] size_t U64StrLen(uint64_t u64);
 
-#endif // MYDSS_INCLUDE_DB_DB_HPP_
+// 计算 int64_t 转换为字符串后的长度
+[[nodiscard]] inline size_t I64StrLen(int64_t i64) {
+  if (i64 >= 0) {
+    return U64StrLen(i64);
+  }
+  return 1 + U64StrLen(-i64);
+}
+
+}  // namespace mydss::util
+
+#endif  // MYDSS_INCLUDE_UTIL_STR_HPP_

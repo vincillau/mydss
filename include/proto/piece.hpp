@@ -24,10 +24,12 @@ namespace mydss::proto {
 class Piece {
  public:
   // 计算序列化后的大小
-  [[nodiscard]] virtual size_t size() const = 0;
+  [[nodiscard]] virtual size_t Size() const = 0;
 
-  // 序列化，将序列化的数据追加到 buf 后
-  virtual void Serialize(std::string& buf) const = 0;
+  // 序列化 Piece
+  // len 不能小于 Size() 的返回值
+  // 返回序列后的数据大小，与 Size() 的返回值相同
+  virtual size_t Serialize(char* buf, size_t len) const = 0;
 };
 
 class SimpleStringPiece : public Piece {
@@ -37,8 +39,8 @@ class SimpleStringPiece : public Piece {
   [[nodiscard]] const auto& value() const { return value_; }
   [[nodiscard]] auto& value() { return value_; }
 
-  [[nodiscard]] size_t size() const override;
-  void Serialize(std::string& buf) const override;
+  [[nodiscard]] size_t Size() const override;
+  size_t Serialize(char* buf, size_t len) const override;
 
  private:
   std::string value_;
@@ -51,8 +53,8 @@ class ErrorPiece : public Piece {
   [[nodiscard]] const auto& value() const { return value_; }
   [[nodiscard]] auto& value() { return value_; }
 
-  [[nodiscard]] size_t size() const override;
-  void Serialize(std::string& buf) const override;
+  [[nodiscard]] size_t Size() const override;
+  size_t Serialize(char* buf, size_t len) const override;
 
  private:
   std::string value_;
@@ -65,8 +67,8 @@ class IntegerPiece : public Piece {
   [[nodiscard]] const auto& value() const { return value_; }
   [[nodiscard]] auto& value() { return value_; }
 
-  [[nodiscard]] size_t size() const override;
-  void Serialize(std::string& buf) const override;
+  [[nodiscard]] size_t Size() const override;
+  size_t Serialize(char* buf, size_t len) const override;
 
  private:
   int64_t value_;
@@ -81,8 +83,8 @@ class BulkStringPiece : public Piece {
   [[nodiscard]] const auto& value() const { return value_; }
   [[nodiscard]] auto& value() { return value_; }
 
-  [[nodiscard]] size_t size() const override;
-  void Serialize(std::string& buf) const override;
+  [[nodiscard]] size_t Size() const override;
+  size_t Serialize(char* buf, size_t len) const override;
 
  private:
   std::string value_;
@@ -94,8 +96,8 @@ class ArrayPiece : public Piece {
   [[nodiscard]] const auto& pieces() const { return pieces_; }
   [[nodiscard]] auto& pieces() { return pieces_; }
 
-  [[nodiscard]] size_t size() const override;
-  void Serialize(std::string& buf) const override;
+  [[nodiscard]] size_t Size() const override;
+  size_t Serialize(char* buf, size_t len) const override;
 
  private:
   std::vector<std::shared_ptr<Piece>> pieces_;

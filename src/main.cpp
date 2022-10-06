@@ -14,10 +14,12 @@
 
 #include <spdlog/spdlog.h>
 
+#include <db/inst.hpp>
 #include <net/addr.hpp>
 #include <net/loop.hpp>
 #include <net/server.hpp>
 
+using mydss::db::Inst;
 using mydss::net::Addr;
 using mydss::net::Loop;
 using mydss::net::Server;
@@ -26,10 +28,14 @@ int main() {
   spdlog::set_level(spdlog::level::debug);
   spdlog::flush_on(spdlog::level::debug);
 
+  Inst::Init(16);
+
   auto loop = Loop::New();
+
   Addr addr("127.0.0.1", 6380);
   auto server = Server::New(loop, addr);
   server->Start();
+
   loop->Run();
 
   return 0;

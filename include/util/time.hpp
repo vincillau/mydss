@@ -12,45 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef MYDSS_INCLUDE_UTIL_TIME_HPP_
+#define MYDSS_INCLUDE_UTIL_TIME_HPP_
+
 #include <sys/time.h>
 
-#include <db/object.hpp>
+#include <cstdint>
 
-namespace mydss::db {
+namespace mydss::util {
 
-namespace {
-
-static int64_t TimeInMsec() {
+inline static int64_t TimeInMsec() {
   timeval now;
   gettimeofday(&now, nullptr);
   int64_t ts = now.tv_sec * 1000 + now.tv_usec / 1000;
   return ts;
 }
 
-}  // namespace
+}  // namespace mydss::util
 
-void Object::Touch() { access_time_ = TimeInMsec(); }
-
-int64_t Object::pttl() const {
-  if (expire_time_ == INT64_MAX) {
-    return -1;  // 永不过期
-  }
-  int64_t now = TimeInMsec();
-  if (expire_time_ <= now) {
-    return 0;
-  }
-  return expire_time_ - now;
-}
-
-void Object::set_pttl(int64_t msec) {
-  assert(msec >= -1);
-
-  if (msec == -1) {
-    expire_time_ = INT64_MAX;
-    return;
-  }
-  int64_t now = TimeInMsec();
-  expire_time_ = now + msec;
-}
-
-}  // namespace mydss::db
+#endif  // MYDSS_INCLUDE_UTIL_TIME_HPP_

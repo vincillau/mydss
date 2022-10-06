@@ -17,20 +17,13 @@
 #include <err/code.hpp>
 #include <err/errno.hpp>
 #include <net/server.hpp>
+#include <net/session.hpp>
 
-using mydss::err::ErrnoStr;
-using mydss::err::kEof;
-using mydss::err::kOk;
-using mydss::util::Buf;
 using std::shared_ptr;
-using std::string;
-using std::placeholders::_1;
-using std::placeholders::_2;
 
 namespace mydss::net {
 
 static constexpr int kBacklog = 512;
-static constexpr int kBufSize = 2048;
 
 void Server::Start() {
   acceptor_->Bind(addr_);
@@ -41,31 +34,12 @@ void Server::Start() {
 }
 
 void Server::OnAccept(shared_ptr<Server> server, shared_ptr<Conn> conn) {
-  auto buf = shared_ptr<char>(new char[kBufSize]);
-  conn->AsyncRecv(Buf(buf.get(), kBufSize),
-                  bind(&Server::OnRecv, conn, buf, _1, _2));
+  auto session = Session::New(conn);
+  session->Start();
 
   auto new_conn = Conn::New(server->loop_);
-  server->acceptor_->AsyncAccept(conn, bind(&Server::OnAccept, server, conn));
-}
-
-void Server::OnRecv(shared_ptr<Conn> conn, shared_ptr<char> buf, int err,
-                    int nbytes) {
-  if (err == kEof) {
-    SPDLOG_DEBUG("connection was closed by peer");
-    conn->Close();
-    return;
-  }
-
-  if (err != kOk) {
-    SPDLOG_CRITICAL("receive failed, reason='{}'", ErrnoStr());
-    exit(EXIT_FAILURE);
-  }
-
-  SPDLOG_DEBUG("received data: '{}'", string(buf.get(), nbytes));
-
-  conn->AsyncRecv(Buf(buf.get(), kBufSize),
-                  bind(&Server::OnRecv, conn, buf, _1, _2));
+  server->acceptor_->AsyncAccept(new_conn,
+                                 bind(&Server::OnAccept, server, new_conn));
 }
 
 }  // namespace mydss::net

@@ -35,9 +35,6 @@ class Server : public std::enable_shared_from_this<Server> {
   static void OnAccept(std::shared_ptr<Server> server,
                        std::shared_ptr<Conn> conn);
 
-  static void OnRecv(std::shared_ptr<Conn> conn, std::shared_ptr<char> buf,
-                     int err, int nbytes);
-
   Server(std::shared_ptr<Loop> loop, Addr addr)
       : loop_(loop), addr_(std::move(addr)) {
     acceptor_ = Acceptor::New(loop);
