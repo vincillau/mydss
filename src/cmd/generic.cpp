@@ -393,7 +393,7 @@ void Generic::Rename(const Req& req, shared_ptr<Piece>& resp) {
   resp = make_shared<SimpleStringPiece>("OK");
 }
 
-void Generic::RenameNX(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::RenameNx(const Req& req, shared_ptr<Piece>& resp) {
   // 检查参数
   if (req.pieces().size() != 3) {
     resp = make_shared<ErrorPiece>(

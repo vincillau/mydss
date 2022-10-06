@@ -46,7 +46,7 @@ class Generic {
   static void PTtl(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
   static void Rename(const proto::Req& req,
                      std::shared_ptr<proto::Piece>& resp);
-  static void RenameNX(const proto::Req& req,
+  static void RenameNx(const proto::Req& req,
                        std::shared_ptr<proto::Piece>& resp);
   static void Touch(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
   static void Ttl(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);

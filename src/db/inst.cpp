@@ -53,7 +53,7 @@ void Inst::Init(int db_num) {
   inst_->RegisterCmd("PEXPIREAT", Generic::PExpireAt);
   inst_->RegisterCmd("PTTL", Generic::PTtl);
   inst_->RegisterCmd("RENAME", Generic::Rename);
-  inst_->RegisterCmd("RENAMENX", Generic::RenameNX);
+  inst_->RegisterCmd("RENAMENX", Generic::RenameNx);
   inst_->RegisterCmd("TOUCH", Generic::Touch);
   inst_->RegisterCmd("TTL", Generic::Ttl);
   inst_->RegisterCmd("TYPE", Generic::Type);
