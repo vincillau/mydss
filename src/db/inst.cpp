@@ -38,10 +38,6 @@ void Inst::Init(int db_num) {
   assert(db_num > 0);
   inst_ = shared_ptr<Inst>(new Inst(db_num));
 
-  // String
-  inst_->RegisterCmd("GET", String::Get);
-  inst_->RegisterCmd("SET", String::Set);
-
   // Generic
   inst_->RegisterCmd("DEL", Generic::Del);
   inst_->RegisterCmd("EXISTS", Generic::Exists);
@@ -57,6 +53,27 @@ void Inst::Init(int db_num) {
   inst_->RegisterCmd("TOUCH", Generic::Touch);
   inst_->RegisterCmd("TTL", Generic::Ttl);
   inst_->RegisterCmd("TYPE", Generic::Type);
+
+  // String
+  inst_->RegisterCmd("APPEND", String::Append);
+  inst_->RegisterCmd("DECR", String::Decr);
+  inst_->RegisterCmd("DECRBY", String::DecrBy);
+  inst_->RegisterCmd("GET", String::Get);
+  inst_->RegisterCmd("GETDEL", String::GetDel);
+  // inst_->RegisterCmd("GETEX", String::GetEx);
+  inst_->RegisterCmd("GETRANGE", String::GetRange);
+  inst_->RegisterCmd("INCR", String::Incr);
+  inst_->RegisterCmd("INCRBY", String::IncrBy);
+  // inst_->RegisterCmd("INCRBYFLOAT", String::IncrByFloat);
+  inst_->RegisterCmd("MGET", String::MGet);
+  inst_->RegisterCmd("MSET", String::MSet);
+  inst_->RegisterCmd("MSETNX", String::MSetNx);
+  // inst_->RegisterCmd("MSETEX", String::MSetEx);
+  inst_->RegisterCmd("SET", String::Set);
+  // inst_->RegisterCmd("SETEX", String::SetEx);
+  // inst_->RegisterCmd("SETNX", String::SetNx);
+  // inst_->RegisterCmd("SETRANGE", String::SetRange);
+  inst_->RegisterCmd("STRLEN", String::StrLen);
 }
 
 shared_ptr<Object> Inst::GetObject(const string& key, int db) {

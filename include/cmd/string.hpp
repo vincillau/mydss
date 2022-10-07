@@ -25,7 +25,8 @@ namespace mydss::cmd {
 
 class String : public db::Object {
  public:
-  String(std::string value) : Object(db::type::kString, db::encoding::kRaw) {
+  String(std::string value = {})
+      : Object(db::type::kString, db::encoding::kRaw) {
     SetValue(std::move(value));
   }
 
@@ -43,11 +44,40 @@ class String : public db::Object {
     assert(encoding_ == db::encoding::kRaw);
     return std::get<std::string>(value_);
   }
+
   void SetValue(std::string value);
+  void SetI64(int64_t i64);
 
  public:
-  static void Set(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void Append(const proto::Req& req,
+                     std::shared_ptr<proto::Piece>& resp);
+  static void Decr(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void DecrBy(const proto::Req& req,
+                     std::shared_ptr<proto::Piece>& resp);
   static void Get(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void GetDel(const proto::Req& req,
+                     std::shared_ptr<proto::Piece>& resp);
+  static void GetEx(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void GetRange(const proto::Req& req,
+                       std::shared_ptr<proto::Piece>& resp);
+  static void Incr(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void IncrBy(const proto::Req& req,
+                     std::shared_ptr<proto::Piece>& resp);
+  static void IncrByFloat(const proto::Req& req,
+                          std::shared_ptr<proto::Piece>& resp);
+  static void MGet(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void MSet(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void MSetNx(const proto::Req& req,
+                     std::shared_ptr<proto::Piece>& resp);
+  static void MSetEx(const proto::Req& req,
+                     std::shared_ptr<proto::Piece>& resp);
+  static void Set(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void SetEx(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void SetNx(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void SetRange(const proto::Req& req,
+                       std::shared_ptr<proto::Piece>& resp);
+  static void StrLen(const proto::Req& req,
+                     std::shared_ptr<proto::Piece>& resp);
 
  private:
   std::variant<std::string, int64_t> value_;
@@ -66,4 +96,4 @@ inline std::string String::EncodingStr() const {
 
 }  // namespace mydss::cmd
 
-#endif // MYDSS_INCLUDE_CMD_STRING_HPP_
+#endif  // MYDSS_INCLUDE_CMD_STRING_HPP_

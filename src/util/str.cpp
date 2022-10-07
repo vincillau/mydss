@@ -68,7 +68,7 @@ bool StrToI64(const string& str, int64_t* result) {
     i64 += digit;
   }
 
-  *result = i64;
+  *result = i64 * sign;
   return true;
 }
 
