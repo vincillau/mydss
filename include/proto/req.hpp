@@ -17,6 +17,7 @@
 
 #include <fmt/ostream.h>
 
+#include <net/client.hpp>
 #include <string>
 #include <vector>
 
@@ -25,14 +26,17 @@ namespace mydss::proto {
 // 请求对象，是一个 Bulk String 的数组
 class Req {
  public:
-  explicit Req(std::vector<std::string> pieces = {})
-      : pieces_(std::move(pieces)) {}
+  explicit Req(net::Client* client = nullptr) : client_(client) {}
 
   [[nodiscard]] const auto& pieces() const { return pieces_; }
   [[nodiscard]] auto& pieces() { return pieces_; }
 
+  [[nodiscard]] const auto client() const { return client_; }
+  void set_client(net::Client* client) { client_ = client; }
+
  private:
   std::vector<std::string> pieces_;
+  net::Client* client_;
 };
 
 // 将 Req 的字符串表示形式写入 std::ostream，用于 fmt 库

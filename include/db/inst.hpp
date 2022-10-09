@@ -41,6 +41,14 @@ class Inst {
   void RegisterCmd(std::string name, Cmd cmd);
   void Handle(const proto::Req& req, proto::Resp& resp);
 
+  bool Select(int db_index) {
+    if (db_index < 0 || db_index >= dbs_.size()) {
+      return false;
+    }
+    cur_db_ = db_index;
+    return true;
+  }
+
  private:
   Inst(int db_num) : dbs_(db_num) {}
 

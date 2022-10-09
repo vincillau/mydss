@@ -14,6 +14,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cmd/connection.hpp>
 #include <cmd/generic.hpp>
 #include <cmd/string.hpp>
 #include <db/inst.hpp>
@@ -21,6 +22,7 @@
 #include <util/str.hpp>
 
 using fmt::format;
+using mydss::cmd::Connection;
 using mydss::cmd::Generic;
 using mydss::cmd::String;
 using mydss::proto::ErrorPiece;
@@ -75,6 +77,13 @@ void Inst::Init(int db_num) {
   // inst_->RegisterCmd("SETNX", String::SetNx);
   // inst_->RegisterCmd("SETRANGE", String::SetRange);
   inst_->RegisterCmd("STRLEN", String::StrLen);
+
+  // Connnection Management
+  inst_->RegisterCmd("CLIENT", Connection::Client);
+  inst_->RegisterCmd("ECHO", Connection::Echo);
+  inst_->RegisterCmd("PING", Connection::Ping);
+  inst_->RegisterCmd("QUIT", Connection::Quit);
+  inst_->RegisterCmd("SELECT", Connection::Select);
 }
 
 shared_ptr<Object> Inst::GetObject(const string& key, int db) {

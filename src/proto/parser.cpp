@@ -72,15 +72,22 @@ Status BulkStringParser::Step(char ch, bool* completed) {
                  ch));
 
     case State::kLenN:
-      if (ch == '\n') {
-        state_ = State::kData;
-        // 预分配内存
-        value_.reserve(target_len_);
+      if (ch != '\n') {
+        return Status(kBadReq, format("expect '\n' after bulk string "
+                                      "length and '\r' instead of '{}'",
+                                      ch));
+      }
+
+      if (target_len_ == 0) {
+        state_ = State::kR;
         return Status::Ok();
       }
-      return Status(kBadReq, format("expect '\n' after bulk string "
-                                    "length and '\r' instead of '{}'",
-                                    ch));
+
+      state_ = State::kData;
+      // 预分配内存
+      value_.reserve(target_len_);
+      return Status::Ok();
+
     case State::kData:
       value_.push_back(ch);
       cur_len_++;

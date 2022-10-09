@@ -12,28 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_PROTO_RESP_HPP_
-#define MYDSS_INCLUDE_PROTO_RESP_HPP_
+#ifndef MYDSS_INCLUDE_NET_CLIENT_HPP_
+#define MYDSS_INCLUDE_NET_CLIENT_HPP_
 
-#include <memory>
+#include <cstdint>
+#include <string>
 
-#include "piece.hpp"
+namespace mydss::net {
 
-namespace mydss::proto {
-
-class Resp {
+class Client {
  public:
-  [[nodiscard]] const auto& piece() const { return piece_; }
-  [[nodiscard]] auto& piece() { return piece_; }
+  Client() : id_(next_id_) { next_id_++; }
 
-  [[nodiscard]] const auto& close() const { return close_; }
-  [[nodiscard]] auto& close() { return close_; }
+  [[nodiscard]] int64_t id() const { return id_; }
+  [[nodiscard]] const auto& name() const { return name_; }
+  void set_name(std::string name) { name_ = std::move(name); }
 
  private:
-  std::shared_ptr<proto::Piece> piece_;
-  bool close_ = false;  // 发送完请求后关闭连接
+  static int64_t next_id_;
+
+ private:
+  int64_t id_;
+  std::string name_;
 };
 
-}  // namespace mydss::proto
+}  // namespace mydss::net
 
-#endif  // MYDSS_INCLUDE_PROTO_RESP_HPP_
+#endif  // MYDSS_INCLUDE_NET_CLIENT_HPP_

@@ -70,10 +70,17 @@ void Session::OnRecv(shared_ptr<Session> session, shared_ptr<char[]> buf,
     return;
   }
 
-  for (const auto& req : reqs) {
+  for (auto& req : reqs) {
+    req.set_client(&session->client());
+
     Resp resp;
     Inst::GetInst()->Handle(req, resp);
     assert(resp.piece());
+
+    if (resp.close()) {
+      session->Send(resp.piece(), true);
+      return;
+    }
     session->Send(resp.piece());
   }
 

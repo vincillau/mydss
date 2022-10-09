@@ -19,6 +19,7 @@
 #include <proto/parser.hpp>
 #include <proto/piece.hpp>
 
+#include "client.hpp"
 #include "conn.hpp"
 
 namespace mydss::net {
@@ -30,6 +31,9 @@ class Session : public std::enable_shared_from_this<Session> {
   }
 
   void Start();
+
+  [[nodiscard]] const auto& client() const { return client_; }
+  [[nodiscard]] auto& client() { return client_; }
 
  private:
   Session(std::shared_ptr<Conn> conn) : conn_(conn) {}
@@ -45,6 +49,7 @@ class Session : public std::enable_shared_from_this<Session> {
  private:
   std::shared_ptr<Conn> conn_;
   proto::ReqParser parser_;
+  net::Client client_;
 };
 
 }  // namespace mydss::net
