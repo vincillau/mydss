@@ -240,8 +240,8 @@ void Generic::ExpireAt(const Req& req, Resp& resp) {
 void Generic::Object(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() == 1) {
-    resp.piece() =
-        make_shared<ErrorPiece>("wrong number of arguments for 'pttl' command");
+    resp.piece() = make_shared<ErrorPiece>(
+        "wrong number of arguments for 'object' command");
     return;
   }
 
