@@ -17,14 +17,15 @@
 #include <cmd/generic.hpp>
 #include <cmd/string.hpp>
 #include <db/inst.hpp>
+#include <proto/resp.hpp>
 #include <util/str.hpp>
 
 using fmt::format;
 using mydss::cmd::Generic;
 using mydss::cmd::String;
 using mydss::proto::ErrorPiece;
-using mydss::proto::Piece;
 using mydss::proto::Req;
+using mydss::proto::Resp;
 using mydss::util::StrLower;
 using std::make_shared;
 using std::shared_ptr;
@@ -124,9 +125,9 @@ void Inst::RegisterCmd(string name, Cmd cmd) {
   cmds_[std::move(name)] = std::move(cmd);
 }
 
-void Inst::Handle(const Req& req, shared_ptr<Piece>& resp) {
+void Inst::Handle(const Req& req, Resp& resp) {
   if (req.pieces().empty()) {
-    resp = make_shared<ErrorPiece>("empty commmand");
+    resp.piece() = make_shared<ErrorPiece>("empty commmand");
     return;
   }
 
@@ -140,7 +141,7 @@ void Inst::Handle(const Req& req, shared_ptr<Piece>& resp) {
     for (size_t i = 1; i < req.pieces().size(); i++) {
       err_str += format(" '{}'", req.pieces()[i]);
     }
-    resp = make_shared<ErrorPiece>(std::move(err_str));
+    resp.piece() = make_shared<ErrorPiece>(std::move(err_str));
     return;
   }
 

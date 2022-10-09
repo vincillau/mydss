@@ -18,6 +18,7 @@
 #include <functional>
 #include <proto/piece.hpp>
 #include <proto/req.hpp>
+#include <proto/resp.hpp>
 #include <vector>
 
 #include "db.hpp"
@@ -27,8 +28,7 @@ namespace mydss::db {
 // 一个数据库实例
 class Inst {
  public:
-  using Cmd =
-      std::function<void(const proto::Req&, std::shared_ptr<proto::Piece>&)>;
+  using Cmd = std::function<void(const proto::Req&, proto::Resp&)>;
 
   static void Init(int db_num);
   static std::shared_ptr<Inst> GetInst() { return inst_; }
@@ -39,7 +39,7 @@ class Inst {
   int DeleteObject(const std::string& key, int db = -1);
 
   void RegisterCmd(std::string name, Cmd cmd);
-  void Handle(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  void Handle(const proto::Req& req, proto::Resp& resp);
 
  private:
   Inst(int db_num) : dbs_(db_num) {}

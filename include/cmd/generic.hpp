@@ -17,40 +17,29 @@
 
 #include <proto/piece.hpp>
 #include <proto/req.hpp>
+#include <proto/resp.hpp>
 
 namespace mydss::cmd {
 
 class Generic {
  public:
-  static void Del(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
-  static void Exists(const proto::Req& req,
-                     std::shared_ptr<proto::Piece>& resp);
-  static void Expire(const proto::Req& req,
-                     std::shared_ptr<proto::Piece>& resp);
-  static void ExpireAt(const proto::Req& req,
-                       std::shared_ptr<proto::Piece>& resp);
-  static void Object(const proto::Req& req,
-                     std::shared_ptr<proto::Piece>& resp);
-  static void ObjectEncoding(const proto::Req& req,
-                             std::shared_ptr<proto::Piece>& resp);
-  static void ObjectIdleTime(const proto::Req& req,
-                             std::shared_ptr<proto::Piece>& resp);
-  static void ObjectRefCount(const proto::Req& req,
-                             std::shared_ptr<proto::Piece>& resp);
-  static void Persist(const proto::Req& req,
-                      std::shared_ptr<proto::Piece>& resp);
-  static void PExpire(const proto::Req& req,
-                      std::shared_ptr<proto::Piece>& resp);
-  static void PExpireAt(const proto::Req& req,
-                        std::shared_ptr<proto::Piece>& resp);
-  static void PTtl(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
-  static void Rename(const proto::Req& req,
-                     std::shared_ptr<proto::Piece>& resp);
-  static void RenameNx(const proto::Req& req,
-                       std::shared_ptr<proto::Piece>& resp);
-  static void Touch(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
-  static void Ttl(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
-  static void Type(const proto::Req& req, std::shared_ptr<proto::Piece>& resp);
+  static void Del(const proto::Req& req, proto::Resp& resp);
+  static void Exists(const proto::Req& req, proto::Resp& resp);
+  static void Expire(const proto::Req& req, proto::Resp& resp);
+  static void ExpireAt(const proto::Req& req, proto::Resp& resp);
+  static void Object(const proto::Req& req, proto::Resp& resp);
+  static void ObjectEncoding(const proto::Req& req, proto::Resp& resp);
+  static void ObjectIdleTime(const proto::Req& req, proto::Resp& resp);
+  static void ObjectRefCount(const proto::Req& req, proto::Resp& resp);
+  static void Persist(const proto::Req& req, proto::Resp& resp);
+  static void PExpire(const proto::Req& req, proto::Resp& resp);
+  static void PExpireAt(const proto::Req& req, proto::Resp& resp);
+  static void PTtl(const proto::Req& req, proto::Resp& resp);
+  static void Rename(const proto::Req& req, proto::Resp& resp);
+  static void RenameNx(const proto::Req& req, proto::Resp& resp);
+  static void Touch(const proto::Req& req, proto::Resp& resp);
+  static void Ttl(const proto::Req& req, proto::Resp& resp);
+  static void Type(const proto::Req& req, proto::Resp& resp);
 };
 
 }  // namespace mydss::cmd

@@ -16,6 +16,7 @@
 
 #include <cmd/generic.hpp>
 #include <db/inst.hpp>
+#include <proto/resp.hpp>
 #include <util/str.hpp>
 #include <util/time.hpp>
 
@@ -24,25 +25,23 @@ using mydss::db::Inst;
 using mydss::proto::BulkStringPiece;
 using mydss::proto::ErrorPiece;
 using mydss::proto::IntegerPiece;
-using mydss::proto::Piece;
 using mydss::proto::Req;
+using mydss::proto::Resp;
 using mydss::proto::SimpleStringPiece;
 using mydss::util::StrLower;
 using mydss::util::StrToI64;
 using mydss::util::TimeInMsec;
 using std::make_shared;
-using std::shared_ptr;
 using std::string;
 
 namespace mydss::cmd {
 
 namespace {
 
-static void SetExpire(const string& cmd, const Req& req,
-                      shared_ptr<Piece>& resp) {
+static void SetExpire(const string& cmd, const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() < 3) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         format("wrong number of arguments for '{}' command", cmd));
     return;
   }
@@ -71,19 +70,19 @@ static void SetExpire(const string& cmd, const Req& req,
       lt = true;
       continue;
     }
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         format("Unsupported option {}", req.pieces()[i]));
     return;
   }
 
   if (nx && (xx || gt || lt)) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "NX and XX, GT or LT options at the same time are not compatible");
     return;
   }
 
   if (gt && lt) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "GT and LT options at the same time are not compatible");
     return;
   }
@@ -93,7 +92,8 @@ static void SetExpire(const string& cmd, const Req& req,
   int64_t time = 0;
   bool ok = StrToI64(time_str, &time);
   if (!ok) {
-    resp = make_shared<ErrorPiece>("value is not an integer or out of range");
+    resp.piece() =
+        make_shared<ErrorPiece>("value is not an integer or out of range");
     return;
   }
 
@@ -115,7 +115,7 @@ static void SetExpire(const string& cmd, const Req& req,
 
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<IntegerPiece>(0);
+    resp.piece() = make_shared<IntegerPiece>(0);
     return;
   }
   int64_t old_pttl = obj->PTtl();
@@ -123,10 +123,10 @@ static void SetExpire(const string& cmd, const Req& req,
   if (nx) {
     if (old_pttl > 0) {
       // 有过期时间则不设置
-      resp = make_shared<IntegerPiece>(0);
+      resp.piece() = make_shared<IntegerPiece>(0);
     } else {
       obj->SetPTtl(new_pttl);
-      resp = make_shared<IntegerPiece>(1);
+      resp.piece() = make_shared<IntegerPiece>(1);
     }
     return;
   }
@@ -134,31 +134,31 @@ static void SetExpire(const string& cmd, const Req& req,
   if (xx) {
     // 有 XX 且没有过期时间
     if (old_pttl == -1) {
-      resp = make_shared<IntegerPiece>(0);
+      resp.piece() = make_shared<IntegerPiece>(0);
     } else {
       // XX 和 GT
       if (gt) {
         if (new_pttl > old_pttl) {
           obj->SetPTtl(new_pttl);
-          resp = make_shared<IntegerPiece>(1);
+          resp.piece() = make_shared<IntegerPiece>(1);
 
         } else {
-          resp = make_shared<IntegerPiece>(0);
+          resp.piece() = make_shared<IntegerPiece>(0);
         }
       }
       // XX 和 LT
       else if (lt) {
         if (new_pttl < old_pttl) {
           obj->SetPTtl(new_pttl);
-          resp = make_shared<IntegerPiece>(1);
+          resp.piece() = make_shared<IntegerPiece>(1);
         } else {
-          resp = make_shared<IntegerPiece>(0);
+          resp.piece() = make_shared<IntegerPiece>(0);
         }
       }
       // 只有 XX
       else {
         obj->SetPTtl(new_pttl);
-        resp = make_shared<IntegerPiece>(1);
+        resp.piece() = make_shared<IntegerPiece>(1);
       }
     }
     return;
@@ -168,34 +168,34 @@ static void SetExpire(const string& cmd, const Req& req,
   if (gt) {
     if (new_pttl > old_pttl) {
       obj->SetPTtl(new_pttl);
-      resp = make_shared<IntegerPiece>(1);
+      resp.piece() = make_shared<IntegerPiece>(1);
 
     } else {
-      resp = make_shared<IntegerPiece>(0);
+      resp.piece() = make_shared<IntegerPiece>(0);
     }
   }
   // 只有 LT
   else if (lt) {
     if (new_pttl < old_pttl) {
       obj->SetPTtl(new_pttl);
-      resp = make_shared<IntegerPiece>(1);
+      resp.piece() = make_shared<IntegerPiece>(1);
     } else {
-      resp = make_shared<IntegerPiece>(0);
+      resp.piece() = make_shared<IntegerPiece>(0);
     }
   }
   // 没有选项
   else {
     obj->SetPTtl(new_pttl);
-    resp = make_shared<IntegerPiece>(1);
+    resp.piece() = make_shared<IntegerPiece>(1);
   }
 }
 
 }  // namespace
 
-void Generic::Del(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Del(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() == 1) {
-    resp =
+    resp.piece() =
         make_shared<ErrorPiece>("wrong number of arguments for 'del' command");
     return;
   }
@@ -206,13 +206,13 @@ void Generic::Del(const Req& req, shared_ptr<Piece>& resp) {
     count += Inst::GetInst()->DeleteObject(key);
   }
 
-  resp = make_shared<IntegerPiece>(count);
+  resp.piece() = make_shared<IntegerPiece>(count);
 }
 
-void Generic::Exists(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Exists(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() == 1) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'exists' command");
     return;
   }
@@ -226,21 +226,21 @@ void Generic::Exists(const Req& req, shared_ptr<Piece>& resp) {
     }
   }
 
-  resp = make_shared<IntegerPiece>(count);
+  resp.piece() = make_shared<IntegerPiece>(count);
 }
 
-void Generic::Expire(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Expire(const Req& req, Resp& resp) {
   SetExpire("expire", req, resp);
 }
 
-void Generic::ExpireAt(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::ExpireAt(const Req& req, Resp& resp) {
   SetExpire("expireat", req, resp);
 }
 
-void Generic::Object(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Object(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() == 1) {
-    resp =
+    resp.piece() =
         make_shared<ErrorPiece>("wrong number of arguments for 'pttl' command");
     return;
   }
@@ -259,14 +259,14 @@ void Generic::Object(const Req& req, shared_ptr<Piece>& resp) {
     ObjectRefCount(req, resp);
     return;
   }
-  resp = make_shared<ErrorPiece>(
+  resp.piece() = make_shared<ErrorPiece>(
       format("unknown subcommand '{}'. Try OBJECT HELP.", req.pieces()[1]));
 }
 
-void Generic::ObjectEncoding(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::ObjectEncoding(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() != 3) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'object|encoding' command");
     return;
   }
@@ -274,16 +274,16 @@ void Generic::ObjectEncoding(const Req& req, shared_ptr<Piece>& resp) {
   const auto& key = req.pieces()[2];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<BulkStringPiece>();
     return;
   }
-  resp = make_shared<BulkStringPiece>(obj->EncodingStr());
+  resp.piece() = make_shared<BulkStringPiece>(obj->EncodingStr());
 }
 
 void Generic::ObjectIdleTime(const Req& req,
-                             shared_ptr<Piece>& resp) {  // 检查参数
+                             Resp& resp) {  // 检查参数
   if (req.pieces().size() != 3) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'object|idletime' command");
     return;
   }
@@ -291,15 +291,15 @@ void Generic::ObjectIdleTime(const Req& req,
   const auto& key = req.pieces()[2];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<BulkStringPiece>();
     return;
   }
-  resp = make_shared<IntegerPiece>(obj->IdleTime() / 1000);
+  resp.piece() = make_shared<IntegerPiece>(obj->IdleTime() / 1000);
 }
 
-void Generic::ObjectRefCount(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::ObjectRefCount(const Req& req, Resp& resp) {
   if (req.pieces().size() != 3) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'object|refcount' command");
     return;
   }
@@ -307,16 +307,16 @@ void Generic::ObjectRefCount(const Req& req, shared_ptr<Piece>& resp) {
   const auto& key = req.pieces()[2];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<BulkStringPiece>();
     return;
   }
-  resp = make_shared<IntegerPiece>(1);
+  resp.piece() = make_shared<IntegerPiece>(1);
 }
 
-void Generic::Persist(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Persist(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() != 2) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'persist' command");
     return;
   }
@@ -324,32 +324,32 @@ void Generic::Persist(const Req& req, shared_ptr<Piece>& resp) {
   const auto& key = req.pieces()[1];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<IntegerPiece>(0);
+    resp.piece() = make_shared<IntegerPiece>(0);
     return;
   }
 
   int64_t pttl = obj->PTtl();
   if (pttl == -1) {
-    resp = make_shared<IntegerPiece>(0);
+    resp.piece() = make_shared<IntegerPiece>(0);
     return;
   }
 
   obj->SetPTtl(-1);
-  resp = make_shared<IntegerPiece>(1);
+  resp.piece() = make_shared<IntegerPiece>(1);
 }
 
-void Generic::PExpire(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::PExpire(const Req& req, Resp& resp) {
   SetExpire("pexpire", req, resp);
 }
 
-void Generic::PExpireAt(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::PExpireAt(const Req& req, Resp& resp) {
   SetExpire("pexpireat", req, resp);
 }
 
-void Generic::PTtl(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::PTtl(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() != 2) {
-    resp =
+    resp.piece() =
         make_shared<ErrorPiece>("wrong number of arguments for 'pttl' command");
     return;
   }
@@ -357,22 +357,22 @@ void Generic::PTtl(const Req& req, shared_ptr<Piece>& resp) {
   const auto& key = req.pieces()[1];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<IntegerPiece>(-2);
+    resp.piece() = make_shared<IntegerPiece>(-2);
     return;
   }
 
   int64_t pttl = obj->PTtl();
   if (pttl == -1) {
-    resp = make_shared<IntegerPiece>(-1);
+    resp.piece() = make_shared<IntegerPiece>(-1);
   } else {
-    resp = make_shared<IntegerPiece>(pttl);
+    resp.piece() = make_shared<IntegerPiece>(pttl);
   }
 }
 
-void Generic::Rename(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Rename(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() != 3) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'rename' command");
     return;
   }
@@ -383,20 +383,20 @@ void Generic::Rename(const Req& req, shared_ptr<Piece>& resp) {
 
   auto key_obj = inst->GetObject(key);
   if (key_obj == nullptr) {
-    resp = make_shared<ErrorPiece>("no such key");
+    resp.piece() = make_shared<ErrorPiece>("no such key");
     return;
   }
 
   key_obj->Touch();
   inst->SetObject(new_key, key_obj);
   inst->DeleteObject(key);
-  resp = make_shared<SimpleStringPiece>("OK");
+  resp.piece() = make_shared<SimpleStringPiece>("OK");
 }
 
-void Generic::RenameNx(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::RenameNx(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() != 3) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'renamenx' command");
     return;
   }
@@ -407,26 +407,26 @@ void Generic::RenameNx(const Req& req, shared_ptr<Piece>& resp) {
 
   auto key_obj = inst->GetObject(key);
   if (key_obj == nullptr) {
-    resp = make_shared<ErrorPiece>("no such key");
+    resp.piece() = make_shared<ErrorPiece>("no such key");
     return;
   }
 
   auto new_key_obj = inst->GetObject(new_key);
   if (new_key_obj != nullptr) {
-    resp = make_shared<IntegerPiece>(0);
+    resp.piece() = make_shared<IntegerPiece>(0);
     return;
   }
 
   key_obj->Touch();
   inst->SetObject(new_key, key_obj);
   inst->DeleteObject(key);
-  resp = make_shared<IntegerPiece>(1);
+  resp.piece() = make_shared<IntegerPiece>(1);
 }
 
-void Generic::Touch(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Touch(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() == 1) {
-    resp = make_shared<ErrorPiece>(
+    resp.piece() = make_shared<ErrorPiece>(
         "wrong number of arguments for 'touch' command");
     return;
   }
@@ -441,13 +441,13 @@ void Generic::Touch(const Req& req, shared_ptr<Piece>& resp) {
     }
   }
 
-  resp = make_shared<IntegerPiece>(count);
+  resp.piece() = make_shared<IntegerPiece>(count);
 }
 
-void Generic::Ttl(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Ttl(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() != 2) {
-    resp =
+    resp.piece() =
         make_shared<ErrorPiece>("wrong number of arguments for 'ttl' command");
     return;
   }
@@ -455,22 +455,22 @@ void Generic::Ttl(const Req& req, shared_ptr<Piece>& resp) {
   const auto& key = req.pieces()[1];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<IntegerPiece>(-2);
+    resp.piece() = make_shared<IntegerPiece>(-2);
     return;
   }
 
   int64_t pttl = obj->PTtl();
   if (pttl == -1) {
-    resp = make_shared<IntegerPiece>(-1);
+    resp.piece() = make_shared<IntegerPiece>(-1);
   } else {
-    resp = make_shared<IntegerPiece>(pttl / 1000);
+    resp.piece() = make_shared<IntegerPiece>(pttl / 1000);
   }
 }
 
-void Generic::Type(const Req& req, shared_ptr<Piece>& resp) {
+void Generic::Type(const Req& req, Resp& resp) {
   // 检查参数
   if (req.pieces().size() != 2) {
-    resp =
+    resp.piece() =
         make_shared<ErrorPiece>("wrong number of arguments for 'type' command");
     return;
   }
@@ -478,10 +478,10 @@ void Generic::Type(const Req& req, shared_ptr<Piece>& resp) {
   const auto& key = req.pieces()[1];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp = make_shared<SimpleStringPiece>("none");
+    resp.piece() = make_shared<SimpleStringPiece>("none");
     return;
   }
-  resp = make_shared<SimpleStringPiece>(obj->TypeStr());
+  resp.piece() = make_shared<SimpleStringPiece>(obj->TypeStr());
 }
 
 }  // namespace mydss::cmd

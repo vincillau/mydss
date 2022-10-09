@@ -15,6 +15,7 @@
 #include <db/inst.hpp>
 #include <err/errno.hpp>
 #include <net/session.hpp>
+#include <proto/resp.hpp>
 
 using mydss::db::Inst;
 using mydss::err::ErrnoStr;
@@ -22,6 +23,7 @@ using mydss::err::kOk;
 using mydss::proto::ErrorPiece;
 using mydss::proto::Piece;
 using mydss::proto::Req;
+using mydss::proto::Resp;
 using mydss::util::Buf;
 using std::make_shared;
 using std::shared_ptr;
@@ -69,10 +71,10 @@ void Session::OnRecv(shared_ptr<Session> session, shared_ptr<char[]> buf,
   }
 
   for (const auto& req : reqs) {
-    shared_ptr<Piece> resp;
+    Resp resp;
     Inst::GetInst()->Handle(req, resp);
-    assert(resp);
-    session->Send(resp);
+    assert(resp.piece());
+    session->Send(resp.piece());
   }
 
   session->conn_->AsyncRecv(Buf(buf.get(), kRecvBufSize),
