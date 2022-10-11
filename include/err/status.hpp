@@ -15,7 +15,7 @@
 #ifndef MYDSS_INCLUDE_ERR_STATUS_HPP_
 #define MYDSS_INCLUDE_ERR_STATUS_HPP_
 
-#include <fmt/ostream.h>
+#include <fmt/core.h>
 
 #include <string>
 
@@ -23,7 +23,7 @@
 
 namespace mydss::err {
 
-// 错误码
+// 状态码
 class Status {
  public:
   Status(int code, std::string msg) : code_(code), msg_(std::move(msg)) {}
@@ -34,17 +34,17 @@ class Status {
   [[nodiscard]] bool ok() const { return code_ == kOk; }
   [[nodiscard]] bool error() const { return code_ != kOk; }
 
-  static Status Ok() { return Status(kOk, "ok"); }
+  // 返回 Status 的字符串表示形式
+  [[nodiscard]] std::string ToString() {
+    return fmt::format("(status:{}) {}", code_, msg_);
+  }
+
+  [[nodiscard]] static Status Ok() { return {kOk, "ok"}; }
 
  private:
   int code_;         // 错误码
   std::string msg_;  // 错误信息
 };
-
-inline static std::ostream& operator<<(std::ostream& os, const Status& status) {
-  os << "(status:" << status.code() << ") " << status.msg();
-  return os;
-}
 
 }  // namespace mydss::err
 

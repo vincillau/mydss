@@ -21,7 +21,7 @@ namespace mydss::err {
 static constexpr int kOk = 0;       // 成功
 static constexpr int kUnknown = 1;  // 未知错误
 static constexpr int kEof = 2;      // 读取到 EOF
-static constexpr int kBadReq = 3;   // 错误的请求
+static constexpr int kBadReq = 3;   // 格式错误的请求
 
 }  // namespace mydss::err
 
