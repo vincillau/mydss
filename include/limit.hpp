@@ -17,7 +17,7 @@
 
 #include <cstdint>
 
-namespace mydss::limit {
+namespace mydss {
 
 // 请求中字符串的最大数目
 constexpr uint64_t kMaxStrInReq = UINT16_MAX;
@@ -25,6 +25,6 @@ constexpr uint64_t kMaxStrInReq = UINT16_MAX;
 // 请求中字符串的最大长度
 constexpr uint64_t kMaxStrLenInReq = UINT16_MAX;
 
-}  // namespace mydss::limit
+}  // namespace mydss
 
 #endif  // MYDSS_INCLUDE_LIMIT_HPP_

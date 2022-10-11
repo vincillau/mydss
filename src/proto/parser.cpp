@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <limit/limit.hpp>
+#include <limit.hpp>
 #include <proto/parser.hpp>
 
 using fmt::format;
 using mydss::err::kBadReq;
 using mydss::err::Status;
-using mydss::limit::kMaxStrInReq;
-using mydss::limit::kMaxStrLenInReq;
 using std::isdigit;
 using std::vector;
 
