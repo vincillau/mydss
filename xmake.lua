@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-set_project("dss")
+set_project("mydss")
 VERSION = "0.1.0"
 set_version(VERSION)
 set_languages("c++17")
