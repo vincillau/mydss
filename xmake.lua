@@ -13,7 +13,8 @@
 -- limitations under the License.
 
 set_project("dss")
-set_version("0.1.0")
+VERSION = "0.1.0"
+set_version(VERSION)
 set_languages("c++17")
 
 add_rules("mode.debug", "mode.release")
@@ -26,22 +27,13 @@ add_requires(
 
 target("mydss")
     set_kind("binary")
+    set_configvar("MYDSS_VERSION", VERSION)
+    set_configdir("$(projectdir)/include")
+    add_configfiles("include/version.hpp.in")
+    add_files("src/*.cpp")
+    add_files("src/**/*.cpp")
     add_includedirs("include")
-    add_files("src/main.cpp")
     add_defines("SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG")
-    add_deps("mydss_")
-    add_links("mydss_")
     add_packages("fmt", "spdlog", "nlohmann_json")
-
-target("mydss_")
-    set_kind("static")
-    add_includedirs("include")
-    add_files("src/cmd/*.cpp")
-    add_files("src/db/*.cpp")
-    add_files("src/net/*.cpp")
-    add_files("src/proto/*.cpp")
-    add_files("src/util/*.cpp")
-    add_defines("SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG")
-    add_packages("fmt", "spdlog")
 
 includes("test")
