@@ -12,10 +12,24 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-target("test_main")
-    set_kind("static")
+target("test_err_errno")
+    set_kind("binary")
     set_group("test")
-    add_files("test_main.cpp")
-    add_packages("gtest", "spdlog")
 
-includes("err")
+    add_files("test_errno.cpp")
+    add_includedirs("$(projectdir)/include")
+
+    add_deps("mydss_", "test_main")
+    add_links("mydss_", "test_main")
+    add_packages("gtest")
+
+target("test_err_status")
+    set_kind("binary")
+    set_group("test")
+
+    add_files("test_status.cpp")
+    add_includedirs("$(projectdir)/include")
+
+    add_deps("mydss_", "test_main")
+    add_links("mydss_", "test_main")
+    add_packages("fmt", "gtest")

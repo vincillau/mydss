@@ -27,13 +27,26 @@ add_requires(
 
 target("mydss")
     set_kind("binary")
+
+    add_files("src/main.cpp")
+    add_includedirs("include")
+    add_defines("SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG")
+
+    add_deps("mydss_")
+    add_links("mydss_")
+    add_packages("fmt", "nlohmann_json", "spdlog")
+
+target("mydss_")
+    set_kind("static")
+
     set_configvar("MYDSS_VERSION", VERSION)
     set_configdir("$(projectdir)/include")
     add_configfiles("include/version.hpp.in")
-    add_files("src/*.cpp")
+
     add_files("src/**/*.cpp")
     add_includedirs("include")
     add_defines("SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG")
-    add_packages("fmt", "spdlog", "nlohmann_json")
+
+    add_packages("fmt", "spdlog")
 
 includes("test")
