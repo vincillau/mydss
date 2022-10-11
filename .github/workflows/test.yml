@@ -47,4 +47,5 @@ jobs:
 
       - name: run tests
         run: |
+          export GTEST_COLOR=yes
           xmake run -v -g test
