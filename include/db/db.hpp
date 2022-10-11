@@ -34,4 +34,4 @@ class Db {
 
 }  // namespace mydss::db
 
-#endif // MYDSS_INCLUDE_DB_DB_HPP_
+#endif  // MYDSS_INCLUDE_DB_DB_HPP_
