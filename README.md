@@ -1,5 +1,8 @@
 # MyDSS
 
+![Version](https://img.shields.io/github/v/release/vincillau/mydss)
+![License](https://img.shields.io/github/license/vincillau/mydss)
+
 兼容 `Redis` 协议的服务器。
 
 ## 构建
