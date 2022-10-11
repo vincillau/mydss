@@ -17,7 +17,12 @@ set_version("0.1.0")
 set_languages("c++17")
 
 add_rules("mode.debug", "mode.release")
-add_requires("fmt", "gtest", "nlohmann_json", "spdlog")
+add_requires(
+    "fmt >= 9.1.0",
+    "gtest >= 1.12.1",
+    "nlohmann_json >= 3.11.2",
+    "spdlog >= 1.10.0"
+)
 
 target("mydss")
     set_kind("binary")
