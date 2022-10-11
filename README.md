@@ -3,6 +3,7 @@
 ![Version](https://img.shields.io/github/v/release/vincillau/mydss)
 [![License](https://img.shields.io/github/license/vincillau/mydss)](LICENSE)
 [![Build](https://github.com/VincilLau/mydss/actions/workflows/build.yml/badge.svg?branch=dev)](https://github.com/VincilLau/mydss/actions/workflows/build.yml)
+[![test](https://github.com/VincilLau/mydss/actions/workflows/test.yml/badge.svg?branch=dev)](https://github.com/VincilLau/mydss/actions/workflows/test.yml)
 
 兼容 `Redis` 协议的服务器。
 
