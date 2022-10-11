@@ -17,7 +17,7 @@ set_version("0.0.0")
 set_languages("c++17")
 
 add_rules("mode.debug", "mode.release")
-add_requires("fmt", "gtest", "spdlog")
+add_requires("fmt", "gtest", "nlohmann_json", "spdlog")
 
 target("mydss")
     set_kind("binary")
@@ -26,7 +26,7 @@ target("mydss")
     add_defines("SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG")
     add_deps("mydss_")
     add_links("mydss_")
-    add_packages("fmt", "spdlog")
+    add_packages("fmt", "spdlog", "nlohmann_json")
 
 target("mydss_")
     set_kind("static")
