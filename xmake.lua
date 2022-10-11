@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 set_project("dss")
-set_version("0.0.0")
+set_version("0.1.0")
 set_languages("c++17")
 
 add_rules("mode.debug", "mode.release")
