@@ -13,8 +13,6 @@
 # limitations under the License.
 
 name: build
-description: Use xmake to build MyDSS
-author: Vincil Lau
 
 on:
   push:
