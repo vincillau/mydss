@@ -15,10 +15,12 @@
 #ifndef MYDSS_INCLUDE_CONFIG_HPP_
 #define MYDSS_INCLUDE_CONFIG_HPP_
 
+#include <cstdint>
 #include <string>
 
 namespace mydss {
 
+// MyDSS 配置
 class Config {
  public:
   [[nodiscard]] const auto& ip() const { return ip_; }
@@ -27,13 +29,13 @@ class Config {
   [[nodiscard]] uint16_t port() const { return port_; }
   void set_port(uint16_t port) { port_ = port; }
 
-  [[nodiscard]] int db_num() const { return db_num_; }
-  void set_db_num(int db_num) { db_num_ = db_num; }
+  [[nodiscard]] uint8_t db_num() const { return db_num_; }
+  void set_db_num(uint8_t db_num) { db_num_ = db_num; }
 
  private:
-  std::string ip_ = "127.0.0.1";
-  uint16_t port_ = 6379;
-  int db_num_ = 16;
+  std::string ip_ = "127.0.0.1";  // 服务器绑定的 IP
+  uint16_t port_ = 6379;          // 服务器绑定的端口
+  uint8_t db_num_ = 16;           // 数据库数目
 };
 
 }  // namespace mydss
