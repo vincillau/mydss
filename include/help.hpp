@@ -12,10 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <net/client.hpp>
+#ifndef MYDSS_INCLUDE_HELP_HPP_
+#define MYDSS_INCLUDE_HELP_HPP_
 
-namespace mydss::net {
+#include <string>
 
-int64_t Client::next_id_ = 1;
+namespace mydss {
 
-}
+static const char* kHelpText = R"(
+Usage:
+  myping [options]
+
+Options:
+  -c, --config file    specify configure file path
+  --version            show version
+  --help               show help text
+)";
+
+}  // namespace mydss
+
+#endif  // MYDSS_INCLUDE_HELP_HPP_

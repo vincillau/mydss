@@ -17,7 +17,8 @@
 
 #include <fmt/ostream.h>
 
-#include <net/client.hpp>
+#include <cassert>
+#include <server/client.hpp>
 #include <string>
 #include <vector>
 
@@ -26,30 +27,30 @@ namespace mydss::proto {
 // 请求对象，是一个 Bulk String 的数组
 class Req {
  public:
-  explicit Req(net::Client* client = nullptr) : client_(client) {}
+  explicit Req(server::Client* client = nullptr) : client_(client) {}
 
   [[nodiscard]] const auto& pieces() const { return pieces_; }
   [[nodiscard]] auto& pieces() { return pieces_; }
 
-  [[nodiscard]] const auto client() const { return client_; }
-  void set_client(net::Client* client) { client_ = client; }
+  [[nodiscard]] auto client() const { return client_; }
+  void set_client(std::shared_ptr<server::Client> client) { client_ = client; }
+
+  [[nodiscard]] std::string ToString() const;
 
  private:
   std::vector<std::string> pieces_;
-  net::Client* client_;
+  std::shared_ptr<server::Client> client_;
 };
 
-// 将 Req 的字符串表示形式写入 std::ostream，用于 fmt 库
-inline static std::ostream& operator<<(std::ostream& os, const Req& req) {
-  os << '(';
-  for (size_t i = 0; i < req.pieces().size(); i++) {
-    os << '\'' << req.pieces()[i] << '\'';
-    if (i != req.pieces().size() - 1) {
-      os << ", ";
-    }
+inline std::string Req::ToString() const {
+  assert(pieces_.size() > 0);
+
+  std::string str = "('" + pieces_.front() + "'";
+  for (size_t i = 1; i < pieces_.size(); i++) {
+    str += ", '" + pieces_[i] + "'";
   }
-  os << ')';
-  return os;
+  str.push_back(')');
+  return str;
 }
 
 }  // namespace mydss::proto

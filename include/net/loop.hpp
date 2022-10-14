@@ -15,15 +15,18 @@
 #ifndef MYDSS_INCLUDE_NET_LOOP_HPP_
 #define MYDSS_INCLUDE_NET_LOOP_HPP_
 
+#include <sys/epoll.h>
+
+#include <cassert>
+#include <err/status.hpp>
 #include <functional>
 #include <memory>
 #include <unordered_map>
 
 namespace mydss::net {
 
-// 事件循环，监听文件描述符的读写事件，并在事件触发时调用 handler
-// Loop 始终监听加入其中的读事件，而是否监听写事件由使用者决定
-// 监听 fd 采用边缘触发模式
+// 事件循环，监听文件描述符的读写事件，并在事件触发时调用对应的 handler
+// 监听采用边缘触发模式
 class Loop {
  public:
   using Handler = std::function<void()>;
@@ -31,27 +34,20 @@ class Loop {
   // 确保 Loop 对象一定被 std::shared_ptr 持有
   [[nodiscard]] static auto New() { return std::shared_ptr<Loop>(new Loop()); }
 
-  // 将 fd 添加到事件循环，并注册读事件对应的 handler
-  // 添加后事件循环将开始监听 fd 的读事件
-  // handler 不能为空
-  void Add(int fd, Handler handler);
-
+  // 设置读事件的 handler
+  [[nodiscard]] err::Status SetInEvent(int fd, Handler handler);
   // 设置写事件的 handler
-  // 如果 handler 不为空，开始监听写事件
-  // 如果 handler 为空，停止监听写事件
-  // 只能在 handler 为空时设置 handler
-  // 只能在 handler 不为空时清空 handler
-  void SetWriteHandler(int fd, Handler handler);
-
+  [[nodiscard]] err::Status SetOutEvent(int fd, Handler handler);
   // 从事件循环中移除 fd
-  void Remove(int fd);
+  [[nodiscard]] err::Status Remove(int fd);
+  // 判断 fd 是否被 Loop 监听
+  [[nodiscard]] bool Contains(int fd) { return fds_.find(fd) != fds_.end(); }
 
   // 运行事件循环
   [[noreturn]] void Run();
 
  private:
-  // 创建 epoll fd
-  Loop();
+  Loop() : epfd_(epoll_create(1)) { assert(epfd_ != -1); }
 
  private:
   // epoll 文件描述符

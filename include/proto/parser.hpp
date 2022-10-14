@@ -15,11 +15,7 @@
 #ifndef MYDSS_INCLUDE_PROTO_PARSER_HPP_
 #define MYDSS_INCLUDE_PROTO_PARSER_HPP_
 
-#include <spdlog/spdlog.h>
-
-#include <cctype>
 #include <err/status.hpp>
-#include <vector>
 
 #include "req.hpp"
 

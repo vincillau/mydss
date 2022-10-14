@@ -12,19 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <spdlog/spdlog.h>
+
 #include <db/inst.hpp>
 #include <err/errno.hpp>
-#include <net/session.hpp>
 #include <proto/resp.hpp>
+#include <server/session.hpp>
 
 using mydss::db::Inst;
 using mydss::err::ErrnoStr;
-using mydss::err::kOk;
+using mydss::err::kEof;
+using mydss::err::Status;
 using mydss::proto::ErrorPiece;
 using mydss::proto::Piece;
 using mydss::proto::Req;
 using mydss::proto::Resp;
-using mydss::util::Buf;
+using mydss::util::Slice;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
@@ -32,38 +35,42 @@ using std::vector;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
-namespace mydss::net {
+namespace mydss::server {
+
 static constexpr size_t kRecvBufSize = 2048;
 
 void Session::Start() {
-  auto buf = shared_ptr<char[]>(new char[kRecvBufSize]);
-  conn_->AsyncRecv(Buf(buf.get(), kRecvBufSize),
-                   bind(&Session::OnRecv, shared_from_this(), buf, _1, _2));
+  auto slice = Slice(kRecvBufSize);
+  conn_->AsyncRecv(slice,
+                   bind(&Session::OnRecv, shared_from_this(), slice, _1, _2));
 }
 
 void Session::Send(shared_ptr<Piece> piece, bool close) {
-  size_t buf_size = piece->Size();
-  auto buf = shared_ptr<char[]>(new char[buf_size]);
+  size_t size = piece->Size();
+  auto slice = Slice(size);
 
-  size_t nbytes = piece->Serialize(buf.get(), buf_size);
-  assert(nbytes == buf_size);
+  size_t nbytes = piece->Serialize(slice.data(), size);
+  assert(nbytes == size);
 
   conn_->AsyncSend(
-      Buf(buf.get(), buf_size),
-      bind(&Session::OnSend, shared_from_this(), buf, close, _1, _2));
+      slice, bind(&Session::OnSend, shared_from_this(), slice, close, _1));
 }
 
-void Session::OnRecv(shared_ptr<Session> session, shared_ptr<char[]> buf,
-                     int err, int nbytes) {
-  if (err != kOk) {
+void Session::OnRecv(shared_ptr<Session> session, Slice slice, Status status,
+                     int nbytes) {
+  if (status.code() == kEof) {
     SPDLOG_DEBUG("receive data failed, errno={}, reason='{}'", errno,
                  ErrnoStr());
     session->conn_->Close();
     return;
   }
+  if (status.error()) {
+    SPDLOG_CRITICAL("{}", status.ToString());
+    abort();
+  }
 
   vector<Req> reqs;
-  auto status = session->parser_.Parse(buf.get(), nbytes, reqs);
+  status = session->parser_.Parse(slice.data(), nbytes, reqs);
   if (status.error()) {
     auto resp = make_shared<ErrorPiece>(status.msg());
     session->Send(resp, true);
@@ -71,7 +78,7 @@ void Session::OnRecv(shared_ptr<Session> session, shared_ptr<char[]> buf,
   }
 
   for (auto& req : reqs) {
-    req.set_client(&session->client());
+    req.set_client(session->client());
 
     Resp resp;
     Inst::GetInst()->Handle(req, resp);
@@ -84,13 +91,13 @@ void Session::OnRecv(shared_ptr<Session> session, shared_ptr<char[]> buf,
     session->Send(resp.piece());
   }
 
-  session->conn_->AsyncRecv(Buf(buf.get(), kRecvBufSize),
-                            bind(&Session::OnRecv, session, buf, _1, _2));
+  session->conn_->AsyncRecv(slice,
+                            bind(&Session::OnRecv, session, slice, _1, _2));
 }
 
-void Session::OnSend(shared_ptr<Session> session, shared_ptr<char[]> buf,
-                     bool close, int err, int nbytes) {
-  if (err != kOk) {
+void Session::OnSend(std::shared_ptr<Session> session, util::Slice slice,
+                     bool close, err::Status status) {
+  if (status.error()) {
     SPDLOG_DEBUG("send data failed, errno={}, reason='{}'", errno, ErrnoStr());
     session->conn_->Close();
     return;
@@ -102,4 +109,4 @@ void Session::OnSend(shared_ptr<Session> session, shared_ptr<char[]> buf,
   }
 }
 
-}  // namespace mydss::net
+}  // namespace mydss::server

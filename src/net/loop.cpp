@@ -12,67 +12,128 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <spdlog/spdlog.h>
-#include <sys/epoll.h>
-
 #include <err/errno.hpp>
 #include <net/loop.hpp>
 
 using mydss::err::ErrnoStr;
+using mydss::err::Status;
 
 namespace mydss::net {
 
-Loop::Loop() : epfd_(epoll_create(1)) {
-  if (epfd_ == -1) {
-    SPDLOG_CRITICAL("epoll_create error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
+Status Loop::SetInEvent(int fd, Handler handler) {
+  auto it = fds_.find(fd);
+  if (it == fds_.end()) {
+    struct epoll_event ev;
+    ev.data.fd = fd;
+    ev.events = EPOLLET | EPOLLIN;
+    int ret = epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ev);
+    if (ret == -1) {
+      return {errno, ErrnoStr()};
+    }
+    fds_[fd] = {std::move(handler), nullptr};
+    return Status::Ok();
   }
-}
 
-void Loop::Add(int fd, Handler handler) {
-  assert(handler);                      // 读事件的 handler 不能为空
-  assert(fds_.find(fd) == fds_.end());  // 不能重复添加 fd
-
-  fds_[fd].first = std::move(handler);
-
-  epoll_event ev;
-  ev.data.fd = fd;
-  ev.events = EPOLLIN | EPOLLET;
-  int ret = epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ev);
-  if (ret == -1) {
-    SPDLOG_CRITICAL("epoll_ctl error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
+  auto& handlers = it->second;
+  uint64_t old_events = 0;
+  uint64_t new_events = 0;
+  if (handlers.first) {
+    old_events |= EPOLLIN;
   }
-}
+  if (handlers.second) {
+    old_events |= EPOLLOUT;
+    new_events |= EPOLLOUT;
+  }
+  if (handler) {
+    new_events |= EPOLLIN;
+  }
 
-void Loop::SetWriteHandler(int fd, Handler handler) {
-  assert(fds_.find(fd) != fds_.end());
-  const auto& old_handler = fds_.at(fd).second;
-  assert(static_cast<bool>(handler) ^ static_cast<bool>(old_handler));
+  // 停止监听 fd
+  if (new_events == 0) {
+    int ret = epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
+    if (ret == -1) {
+      return {errno, ErrnoStr()};
+    }
+  }
+  // 只修改 handler
+  else if (old_events == new_events) {
+    handlers.first = std::move(handler);
+    return Status::Ok();
+  }
 
-  fds_.at(fd).second = std::move(handler);
-
-  epoll_event ev;
+  struct epoll_event ev;
   ev.data.fd = fd;
-  ev.events = EPOLLIN | EPOLLET;
-  ev.events |= handler ? EPOLLOUT : 0;
+  ev.events = EPOLLET | new_events;
   int ret = epoll_ctl(epfd_, EPOLL_CTL_MOD, fd, &ev);
   if (ret == -1) {
-    SPDLOG_CRITICAL("epoll_ctl error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
+    return {errno, ErrnoStr()};
   }
+  handlers.first = std::move(handler);
+  return Status::Ok();
 }
 
-void Loop::Remove(int fd) {
-  assert(fds_.find(fd) != fds_.end());
-
-  fds_.erase(fd);
-
-  int ret = epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
-  if (ret == -1) {
-    SPDLOG_CRITICAL("epoll_ctl error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
+Status Loop::SetOutEvent(int fd, Handler handler) {
+  auto it = fds_.find(fd);
+  if (it == fds_.end()) {
+    struct epoll_event ev;
+    ev.data.fd = fd;
+    ev.events = EPOLLET | EPOLLOUT;
+    int ret = epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ev);
+    if (ret == -1) {
+      return {errno, ErrnoStr()};
+    }
+    fds_[fd] = {nullptr, std::move(handler)};
+    return Status::Ok();
   }
+
+  auto& handlers = it->second;
+  uint64_t old_events = 0;
+  uint64_t new_events = 0;
+  if (handlers.first) {
+    old_events |= EPOLLIN;
+    new_events |= EPOLLIN;
+  }
+  if (handlers.second) {
+    old_events |= EPOLLOUT;
+  }
+  if (handler) {
+    new_events |= EPOLLOUT;
+  }
+
+  // 停止监听 fd
+  if (new_events == 0) {
+    int ret = epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
+    if (ret == -1) {
+      return {errno, ErrnoStr()};
+    }
+  }
+  // 只修改 handler
+  else if (old_events == new_events) {
+    handlers.first = std::move(handler);
+    return Status::Ok();
+  }
+
+  struct epoll_event ev;
+  ev.data.fd = fd;
+  ev.events = EPOLLET | new_events;
+  int ret = epoll_ctl(epfd_, EPOLL_CTL_MOD, fd, &ev);
+  if (ret == -1) {
+    return {errno, ErrnoStr()};
+  }
+  handlers.second = std::move(handler);
+  return Status::Ok();
+}
+
+Status Loop::Remove(int fd) {
+  // 如果 fd 已被监听则移除
+  if (fds_.find(fd) != fds_.end()) {
+    int ret = epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr);
+    if (ret == -1) {
+      return {errno, ErrnoStr()};
+    }
+    fds_.erase(fd);
+  }
+  return Status::Ok();
 }
 
 void Loop::Run() {
@@ -81,11 +142,7 @@ void Loop::Run() {
 
     epoll_event ev;
     int ret = epoll_wait(epfd_, &ev, 1, -1);
-    assert(ret != 0);
-    if (ret == -1) {
-      SPDLOG_CRITICAL("epoll_wait error: {}", ErrnoStr());
-      exit(EXIT_FAILURE);
-    }
+    assert(ret == 1);
 
     if (ev.events & EPOLLIN) {
       const auto& handler = fds_.at(ev.data.fd).first;

@@ -12,27 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_UTIL_BUF_HPP_
-#define MYDSS_INCLUDE_UTIL_BUF_HPP_
+#include <server/client.hpp>
 
-#include <cstddef>
+namespace mydss::server {
 
-namespace mydss::util {
+int64_t Client::next_id_ = 1;
 
-class Buf {
- public:
-  Buf() : data_(nullptr), len_(0) {}
-  Buf(char* data, size_t len) : data_(data), len_(len) {}
-
-  [[nodiscard]] const char* data() const { return data_; }
-  [[nodiscard]] char* data() { return data_; }
-  [[nodiscard]] auto len() const { return len_; }
-
- private:
-  char* data_;
-  size_t len_;
-};
-
-}  // namespace mydss::util
-
-#endif  // MYDSS_INCLUDE_UTIL_BUF_HPP_
+}

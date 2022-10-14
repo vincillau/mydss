@@ -12,40 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_NET_SERVER_HPP_
-#define MYDSS_INCLUDE_NET_SERVER_HPP_
+#ifndef MYDSS_INCLUDE_SERVER_SERVER_HPP_
+#define MYDSS_INCLUDE_SERVER_SERVER_HPP_
 
+#include <config.hpp>
 #include <memory>
+#include <net/acceptor.hpp>
+#include <net/loop.hpp>
 
-#include "acceptor.hpp"
-#include "addr.hpp"
-#include "loop.hpp"
-
-namespace mydss::net {
+namespace mydss::server {
 
 class Server : public std::enable_shared_from_this<Server> {
  public:
-  static auto New(std::shared_ptr<Loop> loop, const Addr& addr) {
-    return std::shared_ptr<Server>(new Server(loop, addr));
+  static auto New(std::shared_ptr<net::Loop> loop, ServerConfig config) {
+    return std::shared_ptr<Server>(new Server(loop, std::move(config)));
   }
 
-  void Start();
+  [[nodiscard]] err::Status Start();
 
  private:
+  Server(std::shared_ptr<net::Loop> loop, ServerConfig config)
+      : loop_(loop), config_(std::move(config)) {}
+
   static void OnAccept(std::shared_ptr<Server> server,
-                       std::shared_ptr<Conn> conn);
-
-  Server(std::shared_ptr<Loop> loop, Addr addr)
-      : loop_(loop), addr_(std::move(addr)) {
-    acceptor_ = Acceptor::New(loop);
-  }
+                       std::shared_ptr<net::Conn> conn);
 
  private:
-  std::shared_ptr<Loop> loop_;
-  std::shared_ptr<Acceptor> acceptor_;
-  Addr addr_;
+  ServerConfig config_;
+  std::shared_ptr<net::Loop> loop_;
+  std::shared_ptr<net::Acceptor> acceptor_;
 };
 
-}  // namespace mydss::net
+}  // namespace mydss::server
 
-#endif  // MYDSS_INCLUDE_NET_SERVER_HPP_
+#endif  // MYDSS_INCLUDE_SERVER_SERVER_HPP_

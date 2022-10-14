@@ -43,10 +43,14 @@ target("mydss_")
     set_configdir("$(projectdir)/include")
     add_configfiles("include/version.hpp.in")
 
-    add_files("src/**/*.cpp")
+    add_files(
+        "src/**/*.cpp",
+        "src/arg.cpp",
+        "src/config.cpp"
+    )
     add_includedirs("include")
     add_defines("SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG")
 
-    add_packages("fmt", "spdlog")
+    add_packages("fmt", "nlohmann_json", "spdlog")
 
 includes("test")
