@@ -37,7 +37,7 @@ class Session : public std::enable_shared_from_this<Session> {
     assert(ret == 1);
   }
 
-  [[nodiscard]] auto client() const { return client_; }
+  [[nodiscard]] auto& client() { return client_; }
   void Send(std::shared_ptr<module::Piece> piece, bool close = false);
 
   static auto GetSession(uint64_t id) { return map_.at(id); }

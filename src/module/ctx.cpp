@@ -88,7 +88,7 @@ const string& Ctx::GetClientName() {
 
 const void Ctx::SetClientName(string name) {
   auto session = Session::GetSession(session_id_);
-  return session->client().set_name(std::move(name));
+  session->client().set_name(std::move(name));
 }
 
 const int64_t Ctx::GetClientId() { return session_id_; }
