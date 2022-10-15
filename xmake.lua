@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 set_project("mydss")
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 set_version(VERSION)
 set_languages("c++17")
 
