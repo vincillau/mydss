@@ -91,11 +91,6 @@ size_t IntegerPiece::Serialize(char* buf, size_t len) const {
 }
 
 size_t BulkStringPiece::Size() const {
-  if (null_) {
-    // "$-1\r\n"
-    return 5;
-  }
-
   size_t result = 1;
   result += U64StrLen(value_.size());
   result += 2;
@@ -106,11 +101,6 @@ size_t BulkStringPiece::Size() const {
 
 size_t BulkStringPiece::Serialize(char* buf, size_t len) const {
   assert(len >= Size());
-
-  if (null_) {
-    memcpy(buf, "$-1\r\n", 5);
-    return 5;
-  }
 
   buf[0] = '$';
   size_t offset = 1;

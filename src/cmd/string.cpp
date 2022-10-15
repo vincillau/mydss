@@ -26,6 +26,7 @@ using mydss::proto::ArrayPiece;
 using mydss::proto::BulkStringPiece;
 using mydss::proto::ErrorPiece;
 using mydss::proto::IntegerPiece;
+using mydss::proto::NullPiece;
 using mydss::proto::Req;
 using mydss::proto::Resp;
 using mydss::proto::SimpleStringPiece;
@@ -209,7 +210,7 @@ void String::Get(const Req& req, Resp& resp) {
   const string& key = req.pieces()[1];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<NullPiece>();
     return;
   }
 
@@ -246,7 +247,7 @@ void String::GetDel(const Req& req, Resp& resp) {
   auto inst = Inst::GetInst();
   auto obj = inst->GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<NullPiece>();
     return;
   }
 
@@ -299,7 +300,7 @@ void String::GetRange(const Req& req, Resp& resp) {  // 检查参数
   const string& key = req.pieces()[1];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<BulkStringPiece>("");
+    resp.piece() = make_shared<BulkStringPiece>();
     return;
   }
 
@@ -334,7 +335,7 @@ void String::GetRange(const Req& req, Resp& resp) {  // 检查参数
     end = 0;
   }
   if (start > end) {
-    resp.piece() = make_shared<BulkStringPiece>("");
+    resp.piece() = make_shared<BulkStringPiece>();
     return;
   }
 
@@ -397,14 +398,14 @@ void String::MGet(const Req& req, Resp& resp) {
     const string& key = req.pieces()[i];
     auto obj = Inst::GetInst()->GetObject(key);
     if (obj == nullptr) {
-      auto piece = make_shared<BulkStringPiece>();
+      auto piece = make_shared<NullPiece>();
       array->pieces().push_back(piece);
       continue;
     }
 
     // 检查类型
     if (obj->Type() != kString) {
-      auto piece = make_shared<BulkStringPiece>();
+      auto piece = make_shared<NullPiece>();
       array->pieces().push_back(piece);
       continue;
     }

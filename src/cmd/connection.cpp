@@ -21,6 +21,7 @@ using mydss::db::Inst;
 using mydss::proto::BulkStringPiece;
 using mydss::proto::ErrorPiece;
 using mydss::proto::IntegerPiece;
+using mydss::proto::NullPiece;
 using mydss::proto::Req;
 using mydss::proto::Resp;
 using mydss::proto::SimpleStringPiece;
@@ -64,7 +65,7 @@ void Connection::ClientGetName(const Req& req, Resp& resp) {
 
   const auto& client_name = req.client()->name();
   if (client_name.empty()) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<NullPiece>();
     return;
   }
   resp.piece() = make_shared<BulkStringPiece>(client_name);

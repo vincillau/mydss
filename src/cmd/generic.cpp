@@ -25,6 +25,7 @@ using mydss::db::Inst;
 using mydss::proto::BulkStringPiece;
 using mydss::proto::ErrorPiece;
 using mydss::proto::IntegerPiece;
+using mydss::proto::NullPiece;
 using mydss::proto::Req;
 using mydss::proto::Resp;
 using mydss::proto::SimpleStringPiece;
@@ -274,7 +275,7 @@ void Generic::ObjectEncoding(const Req& req, Resp& resp) {
   const auto& key = req.pieces()[2];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<NullPiece>();
     return;
   }
   resp.piece() = make_shared<BulkStringPiece>(obj->EncodingStr());
@@ -291,7 +292,7 @@ void Generic::ObjectIdleTime(const Req& req,
   const auto& key = req.pieces()[2];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<NullPiece>();
     return;
   }
   resp.piece() = make_shared<IntegerPiece>(obj->IdleTime() / 1000);
@@ -307,7 +308,7 @@ void Generic::ObjectRefCount(const Req& req, Resp& resp) {
   const auto& key = req.pieces()[2];
   auto obj = Inst::GetInst()->GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    resp.piece() = make_shared<NullPiece>();
     return;
   }
   resp.piece() = make_shared<IntegerPiece>(1);

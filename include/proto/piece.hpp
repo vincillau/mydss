@@ -15,6 +15,8 @@
 #ifndef MYDSS_INCLUDE_RESP_PIECE_HPP_
 #define MYDSS_INCLUDE_RESP_PIECE_HPP_
 
+#include <cassert>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
@@ -76,9 +78,7 @@ class IntegerPiece : public Piece {
 
 class BulkStringPiece : public Piece {
  public:
-  BulkStringPiece() : null_(true) {}
-  explicit BulkStringPiece(std::string value)
-      : value_(std::move(value)), null_(false) {}
+  explicit BulkStringPiece(std::string value = {}) : value_(std::move(value)) {}
 
   [[nodiscard]] const auto& value() const { return value_; }
   [[nodiscard]] auto& value() { return value_; }
@@ -88,7 +88,19 @@ class BulkStringPiece : public Piece {
 
  private:
   std::string value_;
-  bool null_;
+};
+
+class NullPiece : public Piece {
+ public:
+  [[nodiscard]] size_t Size() const override {
+    // $-1\r\n
+    return 5;
+  }
+  size_t Serialize(char* buf, size_t len) const override {
+    assert(len >= Size());
+    memcpy(buf, "$-1\r\n", Size());
+    return 5;
+  }
 };
 
 class ArrayPiece : public Piece {
