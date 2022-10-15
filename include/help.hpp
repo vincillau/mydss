@@ -19,8 +19,7 @@
 
 namespace mydss {
 
-static const char* kHelpText = R"(
-Usage:
+static const char* kHelpText = R"(Usage:
   myping [options]
 
 Options:

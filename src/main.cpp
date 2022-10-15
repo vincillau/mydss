@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     print("{}", kHelpText);
     return 0;
   } else if (arg.version()) {
-    print("version: {}", MYDSS_VERSION);
+    print("version: {}\n", MYDSS_VERSION);
     return 0;
   }
 
