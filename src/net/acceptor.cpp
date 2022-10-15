@@ -22,7 +22,9 @@
 #include <err/errno.hpp>
 #include <net/acceptor.hpp>
 
+using fmt::format;
 using mydss::err::ErrnoStr;
+using mydss::err::kInvalidAddr;
 using mydss::err::Status;
 using std::shared_ptr;
 
@@ -61,20 +63,46 @@ static Status SetReuseAddr(int fd) {
   return Status::Ok();
 }
 
-// 将套接字绑定到 EndPoint
-static Status Bind(int fd, const EndPoint& ep) {
-  struct sockaddr sock_addr;
-  auto status = ep.ToSockAddr(sock_addr);
-  if (status.error()) {
-    return status;
+static Status BindIPv4(int fd, const EndPoint& ep) {
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(ep.port());
+  int ret = inet_pton(AF_INET, ep.ip().c_str(), &addr.sin_addr);
+  if (ret == 0) {
+    return {kInvalidAddr, format("invalid IPv4 address '{}'", ep.ip())};
   }
 
-  int ret = bind(fd, reinterpret_cast<const struct sockaddr*>(&sock_addr),
-                 sizeof(sock_addr));
+  ret = bind(fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
   if (ret == -1) {
     return {errno, ErrnoStr()};
   }
   return Status::Ok();
+}
+
+static Status BindIPv6(int fd, const EndPoint& ep) {
+  struct sockaddr_in6 addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin6_family = AF_INET6;
+  addr.sin6_port = htons(ep.port());
+  int ret = inet_pton(AF_INET6, ep.ip().c_str(), &addr.sin6_addr);
+  if (ret == 0) {
+    return {kInvalidAddr, format("invalid IPv6 address '{}'", ep.ip())};
+  }
+
+  ret = bind(fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
+  if (ret == -1) {
+    return {errno, ErrnoStr()};
+  }
+  return Status::Ok();
+}
+
+// 将套接字绑定到 EndPoint
+static Status Bind(int fd, const EndPoint& ep) {
+  if (ep.type() == InetType::kIPv4) {
+    return BindIPv4(fd, ep);
+  }
+  return BindIPv6(fd, ep);
 }
 
 static Status Listen(int fd, int backlog) {
@@ -136,17 +164,43 @@ void Acceptor::AsyncAccept(shared_ptr<Conn> conn, AcceptHandler handler) {
 }
 
 Status Acceptor::Accept(shared_ptr<Conn> conn) {
-  sockaddr sock_addr;
-  socklen_t sock_len = 0;
-  int sock = accept4(listen_fd_, &sock_addr, &sock_len, SOCK_NONBLOCK);
-  if (sock == -1) {
-    return {errno, ErrnoStr()};
-  }
-
   EndPoint remote;
-  auto status = remote.FromSockAddr(sock_addr, ep_.type());
-  if (status.error()) {
-    return status;
+  int sock = -1;
+
+  if (ep_.type() == InetType::kIPv4) {
+    sockaddr_in addr;
+    socklen_t len = 0;
+    sock = accept4(listen_fd_, reinterpret_cast<struct sockaddr*>(&addr), &len,
+                   SOCK_NONBLOCK);
+    if (sock == -1) {
+      return {errno, ErrnoStr()};
+    }
+
+    char buf[20] = {};
+    auto ret = inet_ntop(AF_INET, &addr, buf, 20);
+    if (ret == nullptr) {
+      return {errno, ErrnoStr()};
+    }
+    remote.set_type(InetType::kIPv4);
+    remote.set_ip(buf);
+    remote.set_port(ntohs(addr.sin_port));
+  } else {
+    sockaddr_in6 addr;
+    socklen_t len = 0;
+    sock = accept4(listen_fd_, reinterpret_cast<struct sockaddr*>(&addr), &len,
+                   SOCK_NONBLOCK);
+    if (sock == -1) {
+      return {errno, ErrnoStr()};
+    }
+
+    char buf[40] = {};
+    auto ret = inet_ntop(AF_INET6, &addr, buf, 40);
+    if (ret == nullptr) {
+      return {errno, ErrnoStr()};
+    }
+    remote.set_type(InetType::kIPv6);
+    remote.set_ip(buf);
+    remote.set_port(ntohs(addr.sin6_port));
   }
 
   conn->Connect(sock, std::move(remote));

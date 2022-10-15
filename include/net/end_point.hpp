@@ -38,23 +38,18 @@ class EndPoint {
   [[nodiscard]] const auto& ip() const { return ip_; }
   [[nodiscard]] auto port() const { return port_; }
 
+  void set_type(InetType type) { type_ = type; }
+  void set_ip(std::string ip) { ip_ = std::move(ip); }
+  void set_port(uint16_t port) { port_ = port; }
+
   // 获取 EndPoint 的字符串表示形式
   [[nodiscard]] std::string ToString() const {
     return fmt::format("({}, {})", ip_, port_);
   }
 
-  // 将通信端点的表示形式从 EndPoint 转换为 struct sockaddr
-  // 可从返回值判断是否转换成功以及出错原因
-  [[nodiscard]] err::Status ToSockAddr(struct sockaddr& sockaddr) const;
-
-  // 将通信端点的表示形式从 struct sockaddr 转换为 EndPoint
-  // 可从返回值判断是否转换成功以及出错原因
-  [[nodiscard]] err::Status FromSockAddr(const struct sockaddr& sockaddr,
-                                         InetType type);
-
  private:
-  InetType type_;
-  std::string ip_;  // 点分 IPv4 地址
+  InetType type_;   // 网际协议类型
+  std::string ip_;  // IP 地址， IPv4 或 IPv6
   uint16_t port_;   // 端口号
 };
 
