@@ -12,37 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_DB_OBJECT_HPP_
-#define MYDSS_INCLUDE_DB_OBJECT_HPP_
+#ifndef MYDSS_INCLUDE_MODULE_OBJECT_HPP_
+#define MYDSS_INCLUDE_MODULE_OBJECT_HPP_
 
 #include <cassert>
 #include <string>
-#include <util/time.hpp>
 
-namespace mydss::db {
+#include "time.hpp"
+
+namespace mydss::module {
 
 class Object {
  public:
-  Object(uint16_t type, uint16_t encoding)
-      : type_(type), encoding_(encoding), expire_time_(INT64_MAX) {
-    Touch();
-  }
+  [[nodiscard]] uint16_t type() const { return type_; }
+  [[nodiscard]] uint16_t encoding() const { return encoding_; }
 
-  [[nodiscard]] virtual uint16_t Type() const = 0;
   [[nodiscard]] virtual std::string TypeStr() const = 0;
-
-  [[nodiscard]] virtual uint16_t Encoding() const = 0;
   [[nodiscard]] virtual std::string EncodingStr() const = 0;
 
   [[nodiscard]] auto access_time() const { return access_time_; }
-  [[nodiscard]] auto IdleTime() const {
-    return util::TimeInMsec() - access_time_;
-  }
-  void Touch() { access_time_ = util::TimeInMsec(); }
+  [[nodiscard]] auto IdleTime() const { return TimeInMsec() - access_time_; }
+  void Touch() { access_time_ = TimeInMsec(); }
 
   [[nodiscard]] auto expire_time() const { return expire_time_; }
   [[nodiscard]] int64_t PTtl() const;
   void SetPTtl(int64_t msec);
+
+ protected:
+  Object(uint16_t type, uint16_t encoding)
+      : type_(type), encoding_(encoding), expire_time_(INT64_MAX) {
+    Touch();
+  }
 
  private:
   uint16_t type_;
@@ -55,7 +55,7 @@ inline int64_t Object::PTtl() const {
   if (expire_time_ == INT64_MAX) {
     return -1;
   }
-  int64_t now = util::TimeInMsec();
+  int64_t now = TimeInMsec();
   if (expire_time_ < now) {
     return 0;
   }
@@ -68,9 +68,9 @@ inline void Object::SetPTtl(int64_t msec) {
     expire_time_ = INT64_MAX;
     return;
   }
-  expire_time_ = util::TimeInMsec() + msec;
+  expire_time_ = TimeInMsec() + msec;
 }
 
-}  // namespace mydss::db
+}  // namespace mydss::module
 
-#endif  // MYDSS_INCLUDE_DB_OBJECT_HPP_
+#endif  // MYDSS_INCLUDE_MODULE_OBJECT_HPP_

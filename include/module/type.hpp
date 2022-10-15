@@ -12,28 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_PROTO_RESP_HPP_
-#define MYDSS_INCLUDE_PROTO_RESP_HPP_
+#ifndef MYDSS_INCLUDE_MODULE_TYPE_HPP_
+#define MYDSS_INCLUDE_MODULE_TYPE_HPP_
 
-#include <memory>
+#include <cstdint>
 
-#include "piece.hpp"
+namespace mydss::module {
 
-namespace mydss::proto {
+namespace type {
 
-class Resp {
- public:
-  [[nodiscard]] const auto& piece() const { return piece_; }
-  [[nodiscard]] auto& piece() { return piece_; }
+static constexpr uint16_t kUnknown = 0;
+static constexpr uint16_t kString = 1;
 
-  [[nodiscard]] const auto& close() const { return close_; }
-  [[nodiscard]] auto& close() { return close_; }
+}  // namespace type
 
- private:
-  std::shared_ptr<proto::Piece> piece_;
-  bool close_ = false;  // 发送完请求后关闭连接
-};
+namespace encoding {
 
-}  // namespace mydss::proto
+static constexpr uint16_t kUnknown = 0;
+static constexpr uint16_t kInt = 1;
+static constexpr uint16_t kRaw = 2;
 
-#endif  // MYDSS_INCLUDE_PROTO_RESP_HPP_
+}  // namespace encoding
+
+}  // namespace mydss::module
+
+#endif  // MYDSS_INCLUDE_MODULE_TYPE_HPP_

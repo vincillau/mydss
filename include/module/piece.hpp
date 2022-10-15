@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_RESP_PIECE_HPP_
-#define MYDSS_INCLUDE_RESP_PIECE_HPP_
+#ifndef MYDSS_INCLUDE_MODULE_PIECE_HPP_
+#define MYDSS_INCLUDE_MODULE_PIECE_HPP_
 
 #include <cassert>
 #include <cstring>
@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace mydss::proto {
+namespace mydss::module {
 
 class Piece {
  public:
@@ -105,16 +105,15 @@ class NullPiece : public Piece {
 
 class ArrayPiece : public Piece {
  public:
-  [[nodiscard]] const auto& pieces() const { return pieces_; }
-  [[nodiscard]] auto& pieces() { return pieces_; }
+  explicit ArrayPiece(int64_t len) : len_(len) {}
 
   [[nodiscard]] size_t Size() const override;
   size_t Serialize(char* buf, size_t len) const override;
 
  private:
-  std::vector<std::shared_ptr<Piece>> pieces_;
+  int64_t len_;
 };
 
-}  // namespace mydss::proto
+}  // namespace mydss::module
 
-#endif  // MYDSS_INCLUDE_RESP_PIECE_HPP_
+#endif  // MYDSS_INCLUDE_MODULE_PIECE_HPP_

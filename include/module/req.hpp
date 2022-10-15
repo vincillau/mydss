@@ -12,22 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_UTIL_TIME_HPP_
-#define MYDSS_INCLUDE_UTIL_TIME_HPP_
+#ifndef MYDSS_INCLUDE_MODULE_REQ_HPP_
+#define MYDSS_INCLUDE_MODULE_REQ_HPP_
 
-#include <sys/time.h>
+#include <string>
+#include <vector>
 
-#include <cstdint>
+namespace mydss::module {
 
-namespace mydss::util {
+using Req = std::vector<std::string>;
 
-inline static int64_t TimeInMsec() {
-  timeval now;
-  gettimeofday(&now, nullptr);
-  int64_t ts = now.tv_sec * 1000 + now.tv_usec / 1000;
-  return ts;
 }
 
-}  // namespace mydss::util
-
-#endif  // MYDSS_INCLUDE_UTIL_TIME_HPP_
+#endif  // MYDSS_INCLUDE_MODULE_REQ_HPP_

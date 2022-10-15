@@ -14,14 +14,14 @@
 
 #include <cassert>
 #include <cstring>
-#include <proto/piece.hpp>
+#include <module/piece.hpp>
 #include <util/str.hpp>
 
 using mydss::util::I64StrLen;
 using mydss::util::U64StrLen;
 using std::to_string;
 
-namespace mydss::proto {
+namespace mydss::module {
 
 size_t SimpleStringPiece::Size() const {
   size_t result = 1;
@@ -123,11 +123,8 @@ size_t BulkStringPiece::Serialize(char* buf, size_t len) const {
 
 size_t ArrayPiece::Size() const {
   size_t result = 1;
-  result += U64StrLen(pieces_.size());
+  result += I64StrLen(len_);
   result += 2;
-  for (const auto& piece : pieces_) {
-    result += piece->Size();
-  }
   return result;
 }
 
@@ -136,19 +133,15 @@ size_t ArrayPiece::Serialize(char* buf, size_t len) const {
 
   buf[0] = '*';
   size_t offset = 1;
-  auto len_str = to_string(pieces_.size());
+  auto len_str = to_string(len_);
   memcpy(buf + 1, len_str.c_str(), len_str.size());
   offset += len_str.size();
   buf[offset] = '\r';
   buf[offset + 1] = '\n';
   offset += 2;
 
-  for (const auto& piece : pieces_) {
-    offset += piece->Serialize(buf + offset, len - offset);
-  }
-
   assert(offset == Size());
   return offset;
 }
 
-}  // namespace mydss::proto
+}  // namespace mydss::module

@@ -35,6 +35,8 @@ class Conn : public std::enable_shared_from_this<Conn> {
   // Conn 对象在销毁前必须被关闭，防止文件描述符泄漏
   ~Conn() { assert(sock_ == -1); }
 
+  [[nodiscard]] bool closed() const { return sock_ == -1; }
+
   void Attach(std::shared_ptr<Loop> loop) {
     assert(loop_ == nullptr);
     assert(!loop->Contains(sock_));

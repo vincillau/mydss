@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_PROTO_PARSER_HPP_
-#define MYDSS_INCLUDE_PROTO_PARSER_HPP_
+#ifndef MYDSS_INCLUDE_SERVER_PARSER_HPP_
+#define MYDSS_INCLUDE_SERVER_PARSER_HPP_
 
 #include <err/status.hpp>
+#include <module/req.hpp>
+#include <vector>
 
-#include "req.hpp"
-
-namespace mydss::proto {
+namespace mydss::server {
 
 // 解析 bulk string
 // BulkStringParser 从不在内部调用 Reset，因此使用者必须在需要重置
@@ -63,7 +63,7 @@ class ReqParser {
 
   // 解析一段数据
   [[nodiscard]] err::Status Parse(const char* buf, size_t len,
-                                  std::vector<Req>& reqs);
+                                  std::vector<module::Req>& reqs);
 
  private:
   enum class State {
@@ -83,11 +83,11 @@ class ReqParser {
 
  private:
   State state_;                  // 解析器的内部状态
-  Req req_;                      // 正在解析的请求
+  module::Req req_;              // 正在解析的请求
   uint64_t array_len_;           // 数组的长度
   BulkStringParser str_parser_;  // 字符串部分的解析器
 };
 
-}  // namespace mydss::proto
+}  // namespace mydss::server
 
-#endif  // MYDSS_INCLUDE_PROTO_PARSER_HPP_
+#endif  // MYDSS_INCLUDE_SERVER_PARSER_HPP_

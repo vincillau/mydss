@@ -12,33 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <spdlog/spdlog.h>
-
 #include <cmd/string.hpp>
-#include <db/inst.hpp>
-#include <util/str.hpp>
 
-using mydss::db::Inst;
-using mydss::db::encoding::kInt;
-using mydss::db::encoding::kRaw;
-using mydss::db::type::kString;
-using mydss::proto::ArrayPiece;
-using mydss::proto::BulkStringPiece;
-using mydss::proto::ErrorPiece;
-using mydss::proto::IntegerPiece;
-using mydss::proto::NullPiece;
-using mydss::proto::Req;
-using mydss::proto::Resp;
-using mydss::proto::SimpleStringPiece;
-using mydss::util::StrToI64;
+using mydss::module::ArrayPiece;
+using mydss::module::BulkStringPiece;
+using mydss::module::Ctx;
+using mydss::module::ErrorPiece;
+using mydss::module::IntegerPiece;
+using mydss::module::NullPiece;
+using mydss::module::SimpleStringPiece;
+using mydss::module::encoding::kInt;
+using mydss::module::encoding::kRaw;
+using mydss::module::type::kString;
 using std::dynamic_pointer_cast;
 using std::make_shared;
 using std::string;
 using std::to_string;
+using std::vector;
 
 namespace mydss::cmd {
-
-namespace {
 
 static bool I64AddOverflow(int64_t a, int64_t b) {
   if (a > 0 && b > 0) {
@@ -54,55 +46,58 @@ static bool I64AddOverflow(int64_t a, int64_t b) {
   return false;
 }
 
-static void StringIncrBy(const string& key, int64_t i64, Resp& resp) {
-  // 不存在则创建
-  auto inst = Inst::GetInst();
-  auto obj = inst->GetObject(key);
+static void StringIncrBy(Ctx& ctx, const string& key, int64_t i64) {
+  auto obj = ctx.GetObject(key);
   if (obj == nullptr) {
     auto new_obj = make_shared<String>();
     new_obj->SetI64(i64);
-    inst->SetObject(key, new_obj);
-    resp.piece() = make_shared<IntegerPiece>(i64);
+    ctx.SetObject(key, new_obj);
+    auto piece = make_shared<IntegerPiece>(i64);
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查类型
-  if (obj->Type() != kString) {
-    resp.piece() = make_shared<ErrorPiece>(
+  if (obj->type() != kString) {
+    auto piece = make_shared<ErrorPiece>(
         "WRONGTYPE Operation against a key holding the wrong kind of value");
+    ctx.Reply(piece);
     return;
   }
 
   auto str = dynamic_pointer_cast<String>(obj);
-  if (str->Encoding() == kInt) {
+  if (str->encoding() == kInt) {
     int64_t old_i64 = str->I64();
 
-    // 检查是否溢出
     if (I64AddOverflow(old_i64, i64)) {
-      resp.piece() =
+      auto piece =
           make_shared<ErrorPiece>("value is not an integer or out of range");
+      ctx.Reply(piece);
       return;
     }
 
     int64_t new_i64 = old_i64 + i64;
     str->SetI64(new_i64);
-    resp.piece() = make_shared<IntegerPiece>(new_i64);
+    auto piece = make_shared<IntegerPiece>(new_i64);
+    ctx.Reply(piece);
     return;
   }
-  if (str->Encoding() == kRaw) {
-    resp.piece() =
+  if (str->encoding() == kRaw) {
+    auto piece =
         make_shared<ErrorPiece>("value is not an integer or out of range");
+    ctx.Reply(piece);
     return;
   }
   assert(false);
 }
 
-}  // namespace
-
 void String::SetValue(std::string value) {
-  int64_t i64 = 0;
-  bool ok = StrToI64(value, &i64);
-  if (ok) {
+  if (value == "0") {
+    encoding_ = kInt;
+    value_ = 0;
+  }
+
+  int64_t i64 = atoll(value.c_str());
+  if (i64 != 0) {
     encoding_ = kInt;
     value_ = i64;
     return;
@@ -117,197 +112,212 @@ void String::SetI64(int64_t i64) {
   value_ = i64;
 }
 
-void String::Append(const Req& req, Resp& resp) {
-  // 检查参数
-  if (req.pieces().size() != 3) {
-    resp.piece() = make_shared<ErrorPiece>(
+void String::Append(Ctx& ctx, vector<string> req) {
+  if (req.size() != 3) {
+    auto piece = make_shared<ErrorPiece>(
         "wrong number of arguments for 'append' command");
+    ctx.Reply(piece);
     return;
   }
 
-  const auto& key = req.pieces()[1];
-  const auto& value = req.pieces()[2];
+  const auto& key = req[1];
+  const auto& value = req[2];
 
-  // 不存在则创建
-  auto inst = Inst::GetInst();
-  auto obj = inst->GetObject(key);
+  auto obj = ctx.GetObject(key);
   if (obj == nullptr) {
     auto new_obj = make_shared<String>(value);
-    inst->SetObject(key, new_obj);
-    resp.piece() = make_shared<IntegerPiece>(value.size());
+    ctx.SetObject(key, new_obj);
+    auto piece = make_shared<IntegerPiece>(value.size());
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查类型
-  if (obj->Type() != kString) {
-    resp.piece() = make_shared<ErrorPiece>(
+  if (obj->type() != kString) {
+    auto piece = make_shared<ErrorPiece>(
         "WRONGTYPE Operation against a key holding the wrong kind of value");
+    ctx.Reply(piece);
     return;
   }
 
   auto str = dynamic_pointer_cast<String>(obj);
   if (str->encoding_ == kInt) {
     auto new_value = to_string(str->I64()) + value;
-    resp.piece() = make_shared<IntegerPiece>(new_value.size());
     str->SetValue(std::move(new_value));
+    auto piece = make_shared<IntegerPiece>(new_value.size());
+    ctx.Reply(piece);
     return;
   }
   if (str->encoding_ == kRaw) {
     auto new_value = str->Str() + value;
-    resp.piece() = make_shared<IntegerPiece>(new_value.size());
     str->SetValue(std::move(new_value));
+    auto piece = make_shared<IntegerPiece>(new_value.size());
+    ctx.Reply(piece);
     return;
   }
   assert(false);
 }
 
-void String::Decr(const Req& req, Resp& resp) {  // 检查参数
-  if (req.pieces().size() != 2) {
-    resp.piece() =
+void String::Decr(Ctx& ctx, vector<string> req) {
+  if (req.size() != 2) {
+    auto piece =
         make_shared<ErrorPiece>("wrong number of arguments for 'decr' command");
+    ctx.Reply(piece);
     return;
   }
 
-  const auto& key = req.pieces()[1];
-  StringIncrBy(key, -1, resp);
+  const auto& key = req[1];
+  StringIncrBy(ctx, key, -1);
 }
 
-void String::DecrBy(const Req& req, Resp& resp) {
-  if (req.pieces().size() != 3) {
-    resp.piece() = make_shared<ErrorPiece>(
+void String::DecrBy(Ctx& ctx, vector<string> req) {
+  if (req.size() != 3) {
+    auto piece = make_shared<ErrorPiece>(
         "wrong number of arguments for 'decrby' command");
     return;
   }
 
-  const auto& key = req.pieces()[1];
-  const auto& value = req.pieces()[2];
+  const auto& key = req[1];
+  const auto& value = req[2];
 
   int64_t i64 = 0;
-  bool ok = StrToI64(value, &i64);
-  if (!ok) {
-    resp.piece() =
-        make_shared<ErrorPiece>("value is not an integer or out of range");
-    return;
+  if (value != "0") {
+    i64 = atoll(value.c_str());
+
+    if (i64 == 0) {
+      auto piece =
+          make_shared<ErrorPiece>("value is not an integer or out of range");
+      ctx.Reply(piece);
+      return;
+    }
   }
+
   if (i64 == INT64_MIN) {
-    resp.piece() =
+    auto piece =
         make_shared<ErrorPiece>("value is not an integer or out of range");
+    ctx.Reply(piece);
     return;
   }
 
-  StringIncrBy(key, -i64, resp);
+  StringIncrBy(ctx, key, -i64);
 }
 
-void String::Get(const Req& req, Resp& resp) {
-  // 检查参数
-  if (req.pieces().size() != 2) {
-    resp.piece() =
+void String::Get(Ctx& ctx, vector<string> req) {
+  if (req.size() != 2) {
+    auto piece =
         make_shared<ErrorPiece>("wrong number of arguments for 'get' command");
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查 key 是否存在
-  const string& key = req.pieces()[1];
-  auto obj = Inst::GetInst()->GetObject(key);
+  const string& key = req[1];
+  auto obj = ctx.GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<NullPiece>();
+    auto piece = make_shared<NullPiece>();
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查类型
-  if (obj->Type() != kString) {
-    resp.piece() = make_shared<ErrorPiece>(
+  if (obj->type() != kString) {
+    auto piece = make_shared<ErrorPiece>(
         "WRONGTYPE Operation against a key holding the wrong kind of value");
+    ctx.Reply(piece);
     return;
   }
 
   auto str = dynamic_pointer_cast<String>(obj);
   if (str->encoding_ == kInt) {
     auto i64_str = to_string(str->I64());
-    resp.piece() = make_shared<BulkStringPiece>(std::move(i64_str));
+    auto piece = make_shared<BulkStringPiece>(std::move(i64_str));
+    ctx.Reply(piece);
     return;
   }
   if (str->encoding_ == kRaw) {
-    resp.piece() = make_shared<BulkStringPiece>(str->Str());
+    auto piece = make_shared<BulkStringPiece>(str->Str());
+    ctx.Reply(piece);
     return;
   }
   assert(false);
 }
 
-void String::GetDel(const Req& req, Resp& resp) {
-  // 检查参数
-  if (req.pieces().size() != 2) {
-    resp.piece() = make_shared<ErrorPiece>(
+void String::GetDel(Ctx& ctx, vector<string> req) {
+  if (req.size() != 2) {
+    auto piece = make_shared<ErrorPiece>(
         "wrong number of arguments for 'getdel' command");
-    return;
   }
 
-  // 检查 key 是否存在
-  const string& key = req.pieces()[1];
-  auto inst = Inst::GetInst();
-  auto obj = inst->GetObject(key);
+  const string& key = req[1];
+  auto obj = ctx.GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<NullPiece>();
+    auto piece = make_shared<NullPiece>();
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查类型
-  if (obj->Type() != kString) {
-    resp.piece() = make_shared<ErrorPiece>(
+  if (obj->type() != kString) {
+    auto piece = make_shared<ErrorPiece>(
         "WRONGTYPE Operation against a key holding the wrong kind of value");
+    ctx.Reply(piece);
     return;
   }
 
-  inst->DeleteObject(key);
+  ctx.DeleteObject(key);
   auto str = dynamic_pointer_cast<String>(obj);
   if (str->encoding_ == kInt) {
     auto i64_str = to_string(str->I64());
-    resp.piece() = make_shared<BulkStringPiece>(std::move(i64_str));
+    auto piece = make_shared<BulkStringPiece>(std::move(i64_str));
+    ctx.Reply(piece);
     return;
   }
   if (str->encoding_ == kRaw) {
-    resp.piece() = make_shared<BulkStringPiece>(str->Str());
+    auto piece = make_shared<BulkStringPiece>(str->Str());
+    ctx.Reply(piece);
     return;
   }
   assert(false);
 }
 
-void String::GetEx(const Req& req, Resp& resp) {}
-
-void String::GetRange(const Req& req, Resp& resp) {  // 检查参数
-  if (req.pieces().size() != 4) {
-    resp.piece() = make_shared<ErrorPiece>(
+void String::GetRange(Ctx& ctx, vector<string> req) {
+  if (req.size() != 4) {
+    auto piece = make_shared<ErrorPiece>(
         "wrong number of arguments for 'getrange' command");
+    ctx.Reply(piece);
     return;
   }
 
   int64_t start = 0;
+  if (req[2] != "0") {
+    start = atoll(req[2].c_str());
+    if (start == 0) {
+      auto piece =
+          make_shared<ErrorPiece>("value is not an integer or out of range");
+      ctx.Reply(piece);
+      return;
+    }
+  }
+
   int64_t end = 0;
-  bool ok = StrToI64(req.pieces()[2], &start);
-  if (!ok) {
-    resp.piece() =
-        make_shared<ErrorPiece>("value is not an integer or out of range");
-    return;
-  }
-  ok = StrToI64(req.pieces()[3], &end);
-  if (!ok) {
-    resp.piece() =
-        make_shared<ErrorPiece>("value is not an integer or out of range");
-    return;
+  if (req[3] != "0") {
+    end = atoll(req[3].c_str());
+    if (end == 0) {
+      auto piece =
+          make_shared<ErrorPiece>("value is not an integer or out of range");
+      ctx.Reply(piece);
+      return;
+    }
   }
 
-  // 检查 key 是否存在
-  const string& key = req.pieces()[1];
-  auto obj = Inst::GetInst()->GetObject(key);
+  const string& key = req[1];
+  auto obj = ctx.GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    auto piece = make_shared<BulkStringPiece>();
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查类型
-  if (obj->Type() != kString) {
-    resp.piece() = make_shared<ErrorPiece>(
+  if (obj->type() != kString) {
+    auto piece = make_shared<ErrorPiece>(
         "WRONGTYPE Operation against a key holding the wrong kind of value");
+    ctx.Reply(piece);
     return;
   }
 
@@ -335,7 +345,8 @@ void String::GetRange(const Req& req, Resp& resp) {  // 检查参数
     end = 0;
   }
   if (start > end) {
-    resp.piece() = make_shared<BulkStringPiece>();
+    auto piece = make_shared<BulkStringPiece>();
+    ctx.Reply(piece);
     return;
   }
 
@@ -347,66 +358,67 @@ void String::GetRange(const Req& req, Resp& resp) {  // 检查参数
   }
 
   auto substr = value.substr(start, end - start + 1);
-  resp.piece() = make_shared<BulkStringPiece>(std::move(substr));
+  auto piece = make_shared<BulkStringPiece>(std::move(substr));
+  ctx.Reply(piece);
 }
 
-void String::Incr(const Req& req, Resp& resp) {
-  if (req.pieces().size() != 2) {
-    resp.piece() =
+void String::Incr(Ctx& ctx, vector<string> req) {
+  if (req.size() != 2) {
+    auto piece =
         make_shared<ErrorPiece>("wrong number of arguments for 'incr' command");
+    ctx.Reply(piece);
     return;
   }
 
-  const auto& key = req.pieces()[1];
-  StringIncrBy(key, 1, resp);
+  const auto& key = req[1];
+  StringIncrBy(ctx, key, 1);
 }
 
-void String::IncrBy(const Req& req, Resp& resp) {
-  if (req.pieces().size() != 3) {
-    resp.piece() = make_shared<ErrorPiece>(
+void String::IncrBy(Ctx& ctx, vector<string> req) {
+  if (req.size() != 3) {
+    auto piece = make_shared<ErrorPiece>(
         "wrong number of arguments for 'incrby' command");
+    ctx.Reply(piece);
     return;
   }
 
-  const auto& key = req.pieces()[1];
-  const auto& value = req.pieces()[2];
+  const auto& key = req[1];
+  const auto& value = req[2];
 
   int64_t i64 = 0;
-  bool ok = StrToI64(value, &i64);
-  if (!ok) {
-    resp.piece() =
-        make_shared<ErrorPiece>("value is not an integer or out of range");
-    return;
+  if (value != "0") {
+    i64 = atoll(value.c_str());
+    if (i64 == 0) {
+      auto piece =
+          make_shared<ErrorPiece>("value is not an integer or out of range");
+      return;
+    }
   }
 
-  StringIncrBy(key, i64, resp);
+  StringIncrBy(ctx, key, i64);
 }
 
-void String::IncrByFloat(const Req& req, Resp& resp) {}
-
-void String::MGet(const Req& req, Resp& resp) {
-  // 检查参数
-  if (req.pieces().size() == 1) {
-    resp.piece() =
+void String::MGet(Ctx& ctx, vector<string> req) {
+  if (req.size() == 1) {
+    auto piece =
         make_shared<ErrorPiece>("wrong number of arguments for 'mget' command");
-    return;
   }
 
-  auto array = make_shared<ArrayPiece>();
-  for (size_t i = 1; i < req.pieces().size(); i++) {
-    // 检查 key 是否存在
-    const string& key = req.pieces()[i];
-    auto obj = Inst::GetInst()->GetObject(key);
+  auto array = make_shared<ArrayPiece>(req.size() - 1);
+  ctx.Reply(array);
+
+  for (size_t i = 1; i < req.size(); i++) {
+    const string& key = req[i];
+    auto obj = ctx.GetObject(key);
     if (obj == nullptr) {
       auto piece = make_shared<NullPiece>();
-      array->pieces().push_back(piece);
+      ctx.Reply(piece);
       continue;
     }
 
-    // 检查类型
-    if (obj->Type() != kString) {
+    if (obj->type() != kString) {
       auto piece = make_shared<NullPiece>();
-      array->pieces().push_back(piece);
+      ctx.Reply(piece);
       continue;
     }
 
@@ -414,115 +426,113 @@ void String::MGet(const Req& req, Resp& resp) {
     if (str->encoding_ == kInt) {
       auto i64_str = to_string(str->I64());
       auto piece = make_shared<BulkStringPiece>(std::move(i64_str));
-      array->pieces().push_back(piece);
+      ctx.Reply(piece);
       continue;
     }
     if (str->encoding_ == kRaw) {
       auto piece = make_shared<BulkStringPiece>(str->Str());
-      array->pieces().push_back(piece);
+      ctx.Reply(piece);
       continue;
     }
     assert(false);
   }
-
-  resp.piece() = array;
 }
 
-void String::MSet(const Req& req, Resp& resp) {
-  if (req.pieces().size() == 1 || req.pieces().size() % 2 == 0) {
-    resp.piece() =
+void String::MSet(Ctx& ctx, vector<string> req) {
+  if (req.size() == 1 || req.size() % 2 == 0) {
+    auto piece =
         make_shared<ErrorPiece>("wrong number of arguments for 'mset' command");
+    ctx.Reply(piece);
     return;
   }
 
-  for (size_t i = 1; i < req.pieces().size(); i += 2) {
-    const auto& key = req.pieces()[i];
-    const auto& value = req.pieces()[i + 1];
+  for (size_t i = 1; i < req.size(); i += 2) {
+    const auto& key = req[i];
+    const auto& value = req[i + 1];
 
     auto obj = make_shared<String>(value);
-    Inst::GetInst()->SetObject(key, obj);
+    ctx.SetObject(key, obj);
   }
 
-  resp.piece() = make_shared<SimpleStringPiece>("OK");
+  auto piece = make_shared<SimpleStringPiece>("OK");
+  ctx.Reply(piece);
 }
 
-void String::MSetNx(const Req& req, Resp& resp) {
-  if (req.pieces().size() == 1 || req.pieces().size() % 2 == 0) {
-    resp.piece() = make_shared<ErrorPiece>(
+void String::MSetNx(Ctx& ctx, vector<string> req) {
+  if (req.size() == 1 || req.size() % 2 == 0) {
+    auto piece = make_shared<ErrorPiece>(
         "wrong number of arguments for 'msetnx' command");
+    ctx.Reply(piece);
     return;
   }
 
   int64_t ret = 1;
-  for (size_t i = 1; i < req.pieces().size(); i += 2) {
-    const auto& key = req.pieces()[i];
-    const auto& value = req.pieces()[i + 1];
+  for (size_t i = 1; i < req.size(); i += 2) {
+    const auto& key = req[i];
+    const auto& value = req[i + 1];
 
-    auto inst = Inst::GetInst();
-    if (inst->GetObject(key) == nullptr) {
+    if (ctx.GetObject(key) == nullptr) {
       auto obj = make_shared<String>(value);
-      inst->SetObject(key, obj);
+      ctx.SetObject(key, obj);
       continue;
     }
     ret = 0;
   }
 
-  resp.piece() = make_shared<IntegerPiece>(ret);
+  auto piece = make_shared<IntegerPiece>(ret);
+  ctx.Reply(piece);
 }
 
-void String::MSetEx(const Req& req, Resp& resp) {}
-
-void String::Set(const Req& req, Resp& resp) {
-  if (req.pieces().size() != 3) {
-    resp.piece() =
+void String::Set(Ctx& ctx, vector<string> req) {
+  if (req.size() != 3) {
+    auto piece =
         make_shared<ErrorPiece>("wrong number of arguments for 'set' command");
+    ctx.Reply(piece);
     return;
   }
 
-  const auto& key = req.pieces()[1];
-  const auto& value = req.pieces()[2];
+  const auto& key = req[1];
+  const auto& value = req[2];
 
   auto obj = make_shared<String>(value);
-  Inst::GetInst()->SetObject(key, obj);
-  resp.piece() = make_shared<SimpleStringPiece>("OK");
+  ctx.SetObject(key, obj);
+  auto piece = make_shared<SimpleStringPiece>("OK");
+  ctx.Reply(piece);
 }
 
-void String::SetEx(const Req& req, Resp& resp) {}
-void String::SetNx(const Req& req, Resp& resp) {}
-void String::SetRange(const Req& req, Resp& resp) {}
-
-void String::StrLen(const Req& req, Resp& resp) {
-  // 检查参数
-  if (req.pieces().size() != 2) {
-    resp.piece() = make_shared<ErrorPiece>(
+void String::StrLen(Ctx& ctx, vector<string> req) {
+  if (req.size() != 2) {
+    auto piece = make_shared<ErrorPiece>(
         "wrong number of arguments for 'strlen' command");
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查 key 是否存在
-  const string& key = req.pieces()[1];
-  auto inst = Inst::GetInst();
-  auto obj = inst->GetObject(key);
+  const string& key = req[1];
+  auto obj = ctx.GetObject(key);
   if (obj == nullptr) {
-    resp.piece() = make_shared<IntegerPiece>(0);
+    auto piece = make_shared<IntegerPiece>(0);
+    ctx.Reply(piece);
     return;
   }
 
-  // 检查类型
-  if (obj->Type() != kString) {
-    resp.piece() = make_shared<ErrorPiece>(
+  if (obj->type() != kString) {
+    auto piece = make_shared<ErrorPiece>(
         "WRONGTYPE Operation against a key holding the wrong kind of value");
+    ctx.Reply(piece);
     return;
   }
 
   auto str = dynamic_pointer_cast<String>(obj);
   if (str->encoding_ == kInt) {
     auto i64_str = to_string(str->I64());
-    resp.piece() = make_shared<IntegerPiece>(i64_str.size());
+    auto piece = make_shared<IntegerPiece>(i64_str.size());
+    ctx.Reply(piece);
     return;
   }
   if (str->encoding_ == kRaw) {
-    resp.piece() = make_shared<IntegerPiece>(str->Str().size());
+    auto piece = make_shared<IntegerPiece>(str->Str().size());
+    ctx.Reply(piece);
     return;
   }
   assert(false);

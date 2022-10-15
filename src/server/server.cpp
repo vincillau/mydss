@@ -43,8 +43,6 @@ Status Server::Start() {
 
 void Server::OnAccept(shared_ptr<Server> server, shared_ptr<Conn> conn) {
   auto session = Session::New(conn);
-  session->Start();
-
   auto new_conn = Conn::New();
   server->acceptor_->AsyncAccept(new_conn,
                                  bind(&Server::OnAccept, server, new_conn));

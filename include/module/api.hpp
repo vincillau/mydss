@@ -12,24 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_SERVER_CLIENT_HPP_
-#define MYDSS_INCLUDE_SERVER_CLIENT_HPP_
+#ifndef MYDSS_INCLUDE_MODULE_API_HPP_
+#define MYDSS_INCLUDE_MODULE_API_HPP_
 
-#include <cstdint>
+#include <memory>
 #include <string>
 
-namespace mydss::server {
+#include "ctx.hpp"
+#include "log.hpp"
+#include "object.hpp"
+#include "piece.hpp"
+#include "req.hpp"
+#include "type.hpp"
 
-// 表示一个客户端，存储与此客户端相关的信息
-class Client {
- public:
-  [[nodiscard]] const auto& name() const { return name_; }
-  void set_name(std::string name) { name_ = std::move(name); }
-
- private:
-  std::string name_;  // 客户端的名称
-};
-
-}  // namespace mydss::server
-
-#endif  // MYDSS_INCLUDE_SERVER_CLIENT_HPP_
+#endif  // MYDSS_INCLUDE_MODULE_API_HPP_

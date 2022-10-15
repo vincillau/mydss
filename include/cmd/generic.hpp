@@ -15,31 +15,29 @@
 #ifndef MYDSS_INCLUDE_CMD_GENERIC_HPP_
 #define MYDSS_INCLUDE_CMD_GENERIC_HPP_
 
-#include <proto/piece.hpp>
-#include <proto/req.hpp>
-#include <proto/resp.hpp>
+#include <module/api.hpp>
 
 namespace mydss::cmd {
 
 class Generic {
  public:
-  static void Del(const proto::Req& req, proto::Resp& resp);
-  static void Exists(const proto::Req& req, proto::Resp& resp);
-  static void Expire(const proto::Req& req, proto::Resp& resp);
-  static void ExpireAt(const proto::Req& req, proto::Resp& resp);
-  static void Object(const proto::Req& req, proto::Resp& resp);
-  static void ObjectEncoding(const proto::Req& req, proto::Resp& resp);
-  static void ObjectIdleTime(const proto::Req& req, proto::Resp& resp);
-  static void ObjectRefCount(const proto::Req& req, proto::Resp& resp);
-  static void Persist(const proto::Req& req, proto::Resp& resp);
-  static void PExpire(const proto::Req& req, proto::Resp& resp);
-  static void PExpireAt(const proto::Req& req, proto::Resp& resp);
-  static void PTtl(const proto::Req& req, proto::Resp& resp);
-  static void Rename(const proto::Req& req, proto::Resp& resp);
-  static void RenameNx(const proto::Req& req, proto::Resp& resp);
-  static void Touch(const proto::Req& req, proto::Resp& resp);
-  static void Ttl(const proto::Req& req, proto::Resp& resp);
-  static void Type(const proto::Req& req, proto::Resp& resp);
+  static void Del(module::Ctx& ctx, module::Req req);
+  static void Exists(module::Ctx& ctx, module::Req req);
+  static void Expire(module::Ctx& ctx, module::Req req);
+  static void ExpireAt(module::Ctx& ctx, module::Req req);
+  static void Object(module::Ctx& ctx, module::Req req);
+  static void ObjectEncoding(module::Ctx& ctx, module::Req req);
+  static void ObjectIdleTime(module::Ctx& ctx, module::Req req);
+  static void ObjectRefCount(module::Ctx& ctx, module::Req req);
+  static void Persist(module::Ctx& ctx, module::Req req);
+  static void PExpire(module::Ctx& ctx, module::Req req);
+  static void PExpireAt(module::Ctx& ctx, module::Req req);
+  static void PTtl(module::Ctx& ctx, module::Req req);
+  static void Rename(module::Ctx& ctx, module::Req req);
+  static void RenameNx(module::Ctx& ctx, module::Req req);
+  static void Touch(module::Ctx& ctx, module::Req req);
+  static void Ttl(module::Ctx& ctx, module::Req req);
+  static void Type(module::Ctx& ctx, module::Req req);
 };
 
 }  // namespace mydss::cmd

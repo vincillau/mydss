@@ -13,15 +13,17 @@
 // limitations under the License.
 
 #include <limit.hpp>
-#include <proto/parser.hpp>
+#include <server/parser.hpp>
 
 using fmt::format;
 using mydss::err::kBadReq;
 using mydss::err::Status;
 using std::isdigit;
+using std::string;
 using std::vector;
 
-namespace mydss::proto {
+namespace mydss::server {
+
 void BulkStringParser::Reset() {
   state_ = State::kTypeChar;
   value_.clear();
@@ -114,7 +116,8 @@ Status BulkStringParser::Step(char ch, bool* completed) {
   return Status::Ok();
 }
 
-Status ReqParser::Parse(const char* buf, size_t len, vector<Req>& reqs) {
+Status ReqParser::Parse(const char* buf, size_t len,
+                        vector<vector<string>>& reqs) {
   for (size_t i = 0; i < len; i++) {
     bool completed = false;
     Status status = Step(buf[i], &completed);
@@ -132,7 +135,7 @@ Status ReqParser::Parse(const char* buf, size_t len, vector<Req>& reqs) {
 
 void ReqParser::Reset() {
   state_ = State::kArrayChar;
-  req_ = Req();
+  req_.clear();
   array_len_ = 0;
   str_parser_.Reset();
 }
@@ -178,7 +181,7 @@ Status ReqParser::Step(char ch, bool* completed) {
       if (ch == '\n') {
         state_ = State::kStr;
         // 预分配内存
-        req_.pieces().reserve(array_len_);
+        req_.reserve(array_len_);
         return Status::Ok();
       }
       return Status(kBadReq, format("expect '\n' after array "
@@ -196,9 +199,9 @@ Status ReqParser::Step(char ch, bool* completed) {
         return Status::Ok();
       }
 
-      req_.pieces().push_back(str_parser_.MoveOut());
+      req_.push_back(str_parser_.MoveOut());
       str_parser_.Reset();
-      if (req_.pieces().size() == array_len_) {
+      if (req_.size() == array_len_) {
         *completed = true;
       }
       return Status::Ok();
@@ -206,4 +209,4 @@ Status ReqParser::Step(char ch, bool* completed) {
   return Status::Ok();
 }
 
-}  // namespace mydss::proto
+}  // namespace mydss::server

@@ -15,34 +15,27 @@
 #ifndef MYDSS_INCLUDE_CMD_STRING_HPP_
 #define MYDSS_INCLUDE_CMD_STRING_HPP_
 
-#include <db/object.hpp>
-#include <db/type.hpp>
-#include <proto/piece.hpp>
-#include <proto/req.hpp>
-#include <proto/resp.hpp>
+#include <module/api.hpp>
 #include <variant>
 
 namespace mydss::cmd {
 
-class String : public db::Object {
+class String : public module::Object {
  public:
   String(std::string value = {})
-      : Object(db::type::kString, db::encoding::kRaw) {
+      : Object(module::type::kString, module::encoding::kRaw) {
     SetValue(std::move(value));
   }
 
-  [[nodiscard]] uint16_t Type() const override { return db::type::kString; }
   [[nodiscard]] std::string TypeStr() const override { return "string"; }
-
-  [[nodiscard]] uint16_t Encoding() const override { return encoding_; }
   [[nodiscard]] std::string EncodingStr() const override;
 
   [[nodiscard]] int64_t I64() const {
-    assert(encoding_ == db::encoding::kInt);
+    assert(encoding_ == module::encoding::kInt);
     return std::get<int64_t>(value_);
   }
   [[nodiscard]] const std::string& Str() const {
-    assert(encoding_ == db::encoding::kRaw);
+    assert(encoding_ == module::encoding::kRaw);
     return std::get<std::string>(value_);
   }
 
@@ -50,25 +43,19 @@ class String : public db::Object {
   void SetI64(int64_t i64);
 
  public:
-  static void Append(const proto::Req& req, proto::Resp& resp);
-  static void Decr(const proto::Req& req, proto::Resp& resp);
-  static void DecrBy(const proto::Req& req, proto::Resp& resp);
-  static void Get(const proto::Req& req, proto::Resp& resp);
-  static void GetDel(const proto::Req& req, proto::Resp& resp);
-  static void GetEx(const proto::Req& req, proto::Resp& resp);
-  static void GetRange(const proto::Req& req, proto::Resp& resp);
-  static void Incr(const proto::Req& req, proto::Resp& resp);
-  static void IncrBy(const proto::Req& req, proto::Resp& resp);
-  static void IncrByFloat(const proto::Req& req, proto::Resp& resp);
-  static void MGet(const proto::Req& req, proto::Resp& resp);
-  static void MSet(const proto::Req& req, proto::Resp& resp);
-  static void MSetNx(const proto::Req& req, proto::Resp& resp);
-  static void MSetEx(const proto::Req& req, proto::Resp& resp);
-  static void Set(const proto::Req& req, proto::Resp& resp);
-  static void SetEx(const proto::Req& req, proto::Resp& resp);
-  static void SetNx(const proto::Req& req, proto::Resp& resp);
-  static void SetRange(const proto::Req& req, proto::Resp& resp);
-  static void StrLen(const proto::Req& req, proto::Resp& resp);
+  static void Append(module::Ctx& ctx, module::Req req);
+  static void Decr(module::Ctx& ctx, module::Req req);
+  static void DecrBy(module::Ctx& ctx, module::Req req);
+  static void Get(module::Ctx& ctx, module::Req req);
+  static void GetDel(module::Ctx& ctx, module::Req req);
+  static void GetRange(module::Ctx& ctx, module::Req req);
+  static void Incr(module::Ctx& ctx, module::Req req);
+  static void IncrBy(module::Ctx& ctx, module::Req req);
+  static void MGet(module::Ctx& ctx, module::Req req);
+  static void MSet(module::Ctx& ctx, module::Req req);
+  static void MSetNx(module::Ctx& ctx, module::Req req);
+  static void Set(module::Ctx& ctx, module::Req req);
+  static void StrLen(module::Ctx& ctx, module::Req req);
 
  private:
   std::variant<std::string, int64_t> value_;
@@ -76,10 +63,10 @@ class String : public db::Object {
 };
 
 inline std::string String::EncodingStr() const {
-  if (encoding_ == db::encoding::kInt) {
+  if (encoding_ == module::encoding::kInt) {
     return "int";
   }
-  if (encoding_ == db::encoding::kRaw) {
+  if (encoding_ == module::encoding::kRaw) {
     return "raw";
   }
   assert(false);

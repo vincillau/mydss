@@ -16,21 +16,21 @@
 
 #include <db/inst.hpp>
 #include <err/errno.hpp>
-#include <proto/resp.hpp>
 #include <server/session.hpp>
 
 using mydss::db::Inst;
 using mydss::err::ErrnoStr;
 using mydss::err::kEof;
 using mydss::err::Status;
-using mydss::proto::ErrorPiece;
-using mydss::proto::Piece;
-using mydss::proto::Req;
-using mydss::proto::Resp;
+using mydss::module::Ctx;
+using mydss::module::ErrorPiece;
+using mydss::module::Piece;
+using mydss::net::Conn;
 using mydss::util::Slice;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
+using std::unordered_map;
 using std::vector;
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -39,13 +39,28 @@ namespace mydss::server {
 
 static constexpr size_t kRecvBufSize = 2048;
 
+uint64_t Session::next_id_ = 1;
+unordered_map<uint64_t, shared_ptr<Session>> Session::map_;
+
+Session::Session(shared_ptr<Conn> conn) : conn_(conn), id_(next_id_) {
+  next_id_++;
+}
+
 void Session::Start() {
+  map_[id_] = shared_from_this();
   auto slice = Slice(kRecvBufSize);
   conn_->AsyncRecv(slice,
                    bind(&Session::OnRecv, shared_from_this(), slice, _1, _2));
 }
 
 void Session::Send(shared_ptr<Piece> piece, bool close) {
+  if (piece == nullptr) {
+    Slice slice;
+    conn_->AsyncSend(
+        slice, bind(&Session::OnSend, shared_from_this(), slice, close, _1));
+    return;
+  }
+
   size_t size = piece->Size();
   auto slice = Slice(size);
 
@@ -69,7 +84,7 @@ void Session::OnRecv(shared_ptr<Session> session, Slice slice, Status status,
     abort();
   }
 
-  vector<Req> reqs;
+  vector<vector<string>> reqs;
   status = session->parser_.Parse(slice.data(), nbytes, reqs);
   if (status.error()) {
     auto resp = make_shared<ErrorPiece>(status.msg());
@@ -78,17 +93,11 @@ void Session::OnRecv(shared_ptr<Session> session, Slice slice, Status status,
   }
 
   for (auto& req : reqs) {
-    req.set_client(session->client());
-
-    Resp resp;
-    Inst::GetInst()->Handle(req, resp);
-    assert(resp.piece());
-
-    if (resp.close()) {
-      session->Send(resp.piece(), true);
+    Ctx ctx(session->id_);
+    Inst::GetInst()->Handle(ctx, req);
+    if (session->conn_->closed()) {
       return;
     }
-    session->Send(resp.piece());
   }
 
   session->conn_->AsyncRecv(slice,

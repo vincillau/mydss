@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <server/client.hpp>
+#ifndef MYDSS_INCLUDE_MODULE_LOG_HPP_
+#define MYDSS_INCLUDE_MODULE_LOG_HPP_
 
-namespace mydss::server {
+#include <spdlog/spdlog.h>
 
-int64_t Client::next_id_ = 1;
+#define MYDSS_LOG_DEBUG(...) SPDLOG_DEBUG(__VA_ARGS__)
+#define MYDSS_LOG_INFO(...) SPDLOG_INFO(__VA_ARGS__)
+#define MYDSS_LOG_WARN(...) SPDLOG_WARN(__VA_ARGS__)
+#define MYDSS_LOG_ERROR(...) SPDLOG_ERROR(__VA_ARGS__)
 
-}
+#endif  // MYDSS_INCLUDE_MODULE_LOG_HPP_

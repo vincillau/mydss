@@ -12,28 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MYDSS_INCLUDE_DB_TYPE_HPP_
-#define MYDSS_INCLUDE_DB_TYPE_HPP_
+#ifndef MYDSS_INCLUDE_MODULE_TIME_HPP_
+#define MYDSS_INCLUDE_MODULE_TIME_HPP_
+
+#include <sys/time.h>
 
 #include <cstdint>
 
-namespace mydss::db {
+namespace mydss::module {
 
-namespace type {
+inline static int64_t TimeInMsec() {
+  timeval now;
+  gettimeofday(&now, nullptr);
+  int64_t ts = now.tv_sec * 1000 + now.tv_usec / 1000;
+  return ts;
+}
 
-static constexpr uint16_t kUnknown = 0;
-static constexpr uint16_t kString = 1;
+}  // namespace mydss::module
 
-}  // namespace type
-
-namespace encoding {
-
-static constexpr uint16_t kUnknown = 0;
-static constexpr uint16_t kInt = 1;
-static constexpr uint16_t kRaw = 2;
-
-}  // namespace encoding
-
-}  // namespace mydss::db
-
-#endif  // MYDSS_INCLUDE_DB_TYPE_HPP_
+#endif  // MYDSS_INCLUDE_MODULE_TIME_HPP_
