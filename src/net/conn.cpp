@@ -128,6 +128,8 @@ void Conn::OnRecv(shared_ptr<Conn> conn) {
     } else if (nbytes == -1) {
       if (errno != EAGAIN) {
         req.handler()({errno, ErrnoStr()}, 0);
+      } else {
+        conn->recv_reqs_.emplace_front(std::move(req));
       }
       return;
     }
@@ -154,20 +156,28 @@ void Conn::OnSend(shared_ptr<Conn> conn) {
     assert(nbytes != 0);
     if (nbytes == req.slice().size()) {
       req.handler()(Status::Ok());
-      conn->send_reqs_.pop_front();
       continue;
     } else if (nbytes > 0) {
       Slice unsent(req.slice(), nbytes, req.slice().size());
       req.set_slice(unsent);
+      conn->send_reqs_.emplace_front(std::move(req));
       return;
     } else {
-      req.handler()({errno, ErrnoStr()});
+      if (errno != EAGAIN) {
+        req.handler()({errno, ErrnoStr()});
+        return;
+      }
+      conn->send_reqs_.emplace_front(std::move(req));
+      return;
     }
   }
 
-  // 停止监听可写事件
-  auto status = conn->loop_->SetOutEvent(conn->sock_, {});
-  assert(status.ok());
+  // 当连接在回调中关闭时，conn->loop_ 为 nullptr
+  if (conn->loop_ != nullptr) {
+    // 停止监听可写事件
+    auto status = conn->loop_->SetOutEvent(conn->sock_, {});
+    assert(status.ok());
+  }
 }
 
 }  // namespace mydss::net
