@@ -64,8 +64,10 @@ int main(int argc, char** argv) {
   auto config = Config::Default();
   if (!arg.conf_file().empty()) {
     status = Config::Load(arg.conf_file(), config);
-    SPDLOG_CRITICAL("{}", status.ToString());
-    return EXIT_FAILURE;
+    if (status.error()) {
+      SPDLOG_CRITICAL("{}", status.ToString());
+      return EXIT_FAILURE;
+    }
   }
 
   Inst::Init(config.db().db_num());
