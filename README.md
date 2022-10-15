@@ -25,8 +25,8 @@ xmake run mydss [options]
 
 ## 文档
 
-[命令列表](docs/commands.md)
-[配置文件格式](docs/config.md)
+- [命令列表](docs/commands.md)
+- [配置文件格式](docs/config.md)
 
 ## 维护者
 
