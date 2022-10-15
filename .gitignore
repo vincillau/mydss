@@ -1,4 +1,5 @@
 .cache/
+.local/
 .vscode/
 .xmake/
 build

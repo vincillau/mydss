@@ -1,5 +1,10 @@
 # MyDSS
 
+![Version](https://img.shields.io/github/v/release/vincillau/mydss)
+[![License](https://img.shields.io/github/license/vincillau/mydss)](LICENSE)
+[![Build](https://github.com/VincilLau/mydss/actions/workflows/build.yml/badge.svg?branch=dev)](https://github.com/VincilLau/mydss/actions/workflows/build.yml)
+[![test](https://github.com/VincilLau/mydss/actions/workflows/test.yml/badge.svg?branch=dev)](https://github.com/VincilLau/mydss/actions/workflows/test.yml)
+
 兼容 `Redis` 协议的服务器。
 
 ## 构建
@@ -7,60 +12,27 @@
 ```bash
 git clone https://github.com/VincilLau/mydss.git
 cd mydss
+git checkout master
 xmake f -m release
 xmake build
 ```
 
-## 支持的命令
+## 运行
 
-### 通用
+```bash
+xmake run mydss [options]
+```
 
-- DEL
-- EXISTS
-- EXPIRE
-- EXPIREAT
-- OBJECT
-- PERSIST
-- PEXPIRE
-- PEXPIREAT
-- PTTL
-- RENAME
-- RENAMENX
-- TOUCH
-- TTL
-- TYPE
+## 文档
 
-### 连接管理
-
-- CLIENT GETNAME
-- CLIENT ID
-- CLIENT SETNAME
-- ECHO
-- PING
-- QUIT
-- SELECT
-
-### 字符串
-
-- APPEND
-- DECR
-- DECRBY
-- GET
-- GETDEL
-- GETRANGE
-- INCR
-- INCRBY
-- MGET
-- MSET
-- MSETNX
-- SET
-- STRLEN
+- [命令列表](docs/commands.md)
+- [配置文件格式](docs/config.md)
 
 ## 维护者
 
-[@Vincil Lau](https://github.com/VincilLau).
+[@Vincil Lau](https://github.com/VincilLau)
 
 ## 许可证
 
-[Apache 2.0](LICENSE).
+[Apache 2.0](LICENSE)
 

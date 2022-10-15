@@ -16,129 +16,160 @@
 #include <spdlog/spdlog.h>
 #include <sys/socket.h>
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <err/errno.hpp>
 #include <net/acceptor.hpp>
 
 using mydss::err::ErrnoStr;
+using mydss::err::Status;
 using std::shared_ptr;
 
 namespace mydss::net {
 
-namespace {
+static Status CreateSocket(InetType type, int& fd) {
+  auto domain = type == InetType::kIPv4 ? AF_INET : AF_INET6;
+  fd = socket(domain, SOCK_STREAM, 0);
+  if (fd == -1) {
+    return {errno, ErrnoStr()};
+  }
+  return Status::Ok();
+}
 
-static bool FdSetNonBlock(int fd) {
+// 设置非阻塞模式
+static Status SetNonBlock(int fd) {
   int flags = fcntl(fd, F_GETFL, 0);
-  if (flags < 0) {
-    return false;
+  if (flags < -1) {
+    return {errno, ErrnoStr()};
   }
   flags |= O_NONBLOCK;
-  return fcntl(fd, F_SETFL, flags) != -1;
+  int ret = fcntl(fd, F_SETFL, flags);
+  if (ret == -1) {
+    return {errno, ErrnoStr()};
+  }
+  return Status::Ok();
 }
 
-}  // namespace
-
-Acceptor::Acceptor(std::shared_ptr<Loop> loop)
-    : loop_(loop), listen_fd_(socket(AF_INET, SOCK_STREAM, 0)) {
-  // 创建监听套接字
-  if (listen_fd_ == -1) {
-    SPDLOG_CRITICAL("create socket error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
-  }
-
-  // 设置非阻塞模式
-  bool ok = FdSetNonBlock(listen_fd_);
-  if (!ok) {
-    SPDLOG_CRITICAL("FdSetNonblock error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
-  }
-
-  // 设置端口复用
+// 设置 SO_REUSEADDR 标志
+static Status SetReuseAddr(int fd) {
   int opt = 1;
-  int ret = setsockopt(listen_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+  int ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
   if (ret == -1) {
-    SPDLOG_CRITICAL("setsockopt error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
+    return {errno, ErrnoStr()};
+  }
+  return Status::Ok();
+}
+
+// 将套接字绑定到 EndPoint
+static Status Bind(int fd, const EndPoint& ep) {
+  struct sockaddr sock_addr;
+  auto status = ep.ToSockAddr(sock_addr);
+  if (status.error()) {
+    return status;
+  }
+
+  int ret = bind(fd, reinterpret_cast<const struct sockaddr*>(&sock_addr),
+                 sizeof(sock_addr));
+  if (ret == -1) {
+    return {errno, ErrnoStr()};
+  }
+  return Status::Ok();
+}
+
+static Status Listen(int fd, int backlog) {
+  int ret = listen(fd, backlog);
+  if (ret == -1) {
+    return {errno, ErrnoStr()};
+  }
+  return Status::Ok();
+}
+
+Status Acceptor::Start(int backlog) {
+  auto status = CreateSocket(ep_.type(), listen_fd_);
+  if (status.error()) {
+    return status;
+  }
+
+  status = SetNonBlock(listen_fd_);
+  if (status.error()) {
+    return status;
+  }
+
+  status = SetReuseAddr(listen_fd_);
+  if (status.error()) {
+    return status;
+  }
+
+  status = Bind(listen_fd_, ep_);
+  if (status.error()) {
+    return status;
+  }
+
+  status = Listen(listen_fd_, backlog);
+  if (status.error()) {
+    return status;
+  }
+
+  return Status::Ok();
+}
+
+void Acceptor::AsyncAccept(shared_ptr<Conn> conn, AcceptHandler handler) {
+  assert(handler);
+
+  if (reqs_.size() > 0) {
+    reqs_.emplace_back(conn, std::move(handler));
+    return;
+  }
+
+  auto status = Accept(conn);
+  if (status.ok() || status.code() != EAGAIN) {
+    handler(std::move(status));
+    return;
+  }
+
+  reqs_.emplace_back(conn, std::move(handler));
+  status = loop_->SetInEvent(listen_fd_, bind(OnAccept, shared_from_this()));
+  if (status.error()) {
+    handler(std::move(status));
   }
 }
 
-void Acceptor::Bind(const Addr& addr) {
-  // 转换地址
-  sockaddr sock_addr;
-  bool ok = addr.ToSockAddr(sock_addr);
-  if (!ok) {
-    SPDLOG_CRITICAL("inet_pton error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
-  }
-
-  // 绑定地址
-  int ret =
-      bind(listen_fd_, reinterpret_cast<const struct sockaddr*>(&sock_addr),
-           sizeof(sock_addr));
-  if (ret == -1) {
-    SPDLOG_CRITICAL("bind error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
-  }
-  SPDLOG_INFO("bind on '{}'", addr);
-}
-
-void Acceptor::Listen(int backlog) {
-  // 接收连接
-  int ret = listen(listen_fd_, backlog);
-  if (ret == -1) {
-    SPDLOG_CRITICAL("listen error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
-  }
-
-  // 注册文件描述符
-  loop_->Add(listen_fd_, bind(&Acceptor::OnAccept, shared_from_this()));
-}
-
-bool Acceptor::Accept(shared_ptr<Conn> conn) {
+Status Acceptor::Accept(shared_ptr<Conn> conn) {
   sockaddr sock_addr;
   socklen_t sock_len = 0;
   int sock = accept4(listen_fd_, &sock_addr, &sock_len, SOCK_NONBLOCK);
   if (sock == -1) {
-    if (errno == EAGAIN) {
-      return false;
-    }
-    SPDLOG_CRITICAL("accept4 failed, listen_fd_={}, reason='{}'", listen_fd_,
-                    ErrnoStr());
-    exit(EXIT_FAILURE);
+    return {errno, ErrnoStr()};
   }
 
-  Addr remote;
-  bool ok = remote.FromSockAddr(sock_addr);
-  if (!ok) {
-    SPDLOG_CRITICAL("FromSockAddr error: {}", ErrnoStr());
-    exit(EXIT_FAILURE);
+  EndPoint remote;
+  auto status = remote.FromSockAddr(sock_addr, ep_.type());
+  if (status.error()) {
+    return status;
   }
 
   conn->Connect(sock, std::move(remote));
-  return true;
-}
-
-void Acceptor::AsyncAccept(shared_ptr<Conn> conn, AcceptHandler handler) {
-  assert(!handler_);
-
-  bool accepted = Accept(conn);
-  if (accepted) {
-    handler();
-    return;
-  }
-
-  conn_ = conn;
-  handler_ = std::move(handler);
+  conn->Attach(loop_);
+  return Status::Ok();
 }
 
 void Acceptor::OnAccept(shared_ptr<Acceptor> acceptor) {
-  assert(acceptor->handler_);
+  assert(acceptor->reqs_.size() > 0);
 
-  auto handler = std::move(acceptor->handler_);
-  bool accepted = acceptor->Accept(acceptor->conn_);
-  assert(accepted);
-  handler();
+  while (acceptor->reqs_.size() > 0) {
+    auto& req = acceptor->reqs_.front();
+    auto status = acceptor->Accept(req.conn());
+    if (status.code() == EAGAIN) {
+      return;
+    }
+    req.handler()(status);
+    acceptor->reqs_.pop_front();
+  }
+
+  // 没有待处理的建立连接请求，停止等待可读事件
+  auto status = acceptor->loop_->SetInEvent(acceptor->listen_fd_, nullptr);
+  assert(status.ok());
 }
 
 }  // namespace mydss::net

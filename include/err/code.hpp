@@ -15,13 +15,23 @@
 #ifndef MYDSS_INCLUDE_ERR_CODE_HPP_
 #define MYDSS_INCLUDE_ERR_CODE_HPP_
 
-// MyDSS 错误码
+#include <cerrno>
+
 namespace mydss::err {
 
-static constexpr int kOk = 0;       // 成功
-static constexpr int kUnknown = 1;  // 未知错误
-static constexpr int kEof = 2;      // 读取到 EOF
-static constexpr int kBadReq = 3;   // 错误的请求
+// MyDSS 错误码
+// 错误码的具体值可能会改变，所以不能依赖于错误码的具体值
+static constexpr int kOk = 0;  // 成功
+
+// 1-1000 保留给 errno
+
+static constexpr int kUnknown = 1001;        // 未知错误
+static constexpr int kEof = 1002;            // 读取到 EOF
+static constexpr int kBadReq = 1003;         // 格式错误的请求
+static constexpr int kJsonParseErr = 1004;   // JSON 解析错误
+static constexpr int kInvalidConfig = 1005;  // 无效的配置
+static constexpr int kInvalidArgs = 1006;    // 无效的参数
+static constexpr int kInvalidAddr = 1007;    // 无效的地址
 
 }  // namespace mydss::err
 

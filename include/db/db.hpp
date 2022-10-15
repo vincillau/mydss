@@ -16,10 +16,9 @@
 #define MYDSS_INCLUDE_DB_DB_HPP_
 
 #include <memory>
+#include <module/object.hpp>
 #include <string>
 #include <unordered_map>
-
-#include "object.hpp"
 
 namespace mydss::db {
 
@@ -29,9 +28,9 @@ class Db {
   [[nodiscard]] auto& objs() { return objs_; }
 
  private:
-  std::unordered_map<std::string, std::shared_ptr<Object>> objs_;
+  std::unordered_map<std::string, std::shared_ptr<module::Object>> objs_;
 };
 
 }  // namespace mydss::db
 
-#endif // MYDSS_INCLUDE_DB_DB_HPP_
+#endif  // MYDSS_INCLUDE_DB_DB_HPP_

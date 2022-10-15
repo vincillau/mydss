@@ -18,16 +18,15 @@
 #include <cmd/generic.hpp>
 #include <cmd/string.hpp>
 #include <db/inst.hpp>
-#include <proto/resp.hpp>
 #include <util/str.hpp>
 
 using fmt::format;
 using mydss::cmd::Connection;
 using mydss::cmd::Generic;
 using mydss::cmd::String;
-using mydss::proto::ErrorPiece;
-using mydss::proto::Req;
-using mydss::proto::Resp;
+using mydss::module::Ctx;
+using mydss::module::ErrorPiece;
+using mydss::module::Req;
 using mydss::util::StrLower;
 using std::make_shared;
 using std::shared_ptr;
@@ -63,19 +62,13 @@ void Inst::Init(int db_num) {
   inst_->RegisterCmd("DECRBY", String::DecrBy);
   inst_->RegisterCmd("GET", String::Get);
   inst_->RegisterCmd("GETDEL", String::GetDel);
-  // inst_->RegisterCmd("GETEX", String::GetEx);
   inst_->RegisterCmd("GETRANGE", String::GetRange);
   inst_->RegisterCmd("INCR", String::Incr);
   inst_->RegisterCmd("INCRBY", String::IncrBy);
-  // inst_->RegisterCmd("INCRBYFLOAT", String::IncrByFloat);
   inst_->RegisterCmd("MGET", String::MGet);
   inst_->RegisterCmd("MSET", String::MSet);
   inst_->RegisterCmd("MSETNX", String::MSetNx);
-  // inst_->RegisterCmd("MSETEX", String::MSetEx);
   inst_->RegisterCmd("SET", String::Set);
-  // inst_->RegisterCmd("SETEX", String::SetEx);
-  // inst_->RegisterCmd("SETNX", String::SetNx);
-  // inst_->RegisterCmd("SETRANGE", String::SetRange);
   inst_->RegisterCmd("STRLEN", String::StrLen);
 
   // Connnection Management
@@ -84,45 +77,6 @@ void Inst::Init(int db_num) {
   inst_->RegisterCmd("PING", Connection::Ping);
   inst_->RegisterCmd("QUIT", Connection::Quit);
   inst_->RegisterCmd("SELECT", Connection::Select);
-}
-
-shared_ptr<Object> Inst::GetObject(const string& key, int db) {
-  if (db == -1) {
-    db = cur_db_;
-  }
-  assert(db >= 0 && db < dbs_.size());
-
-  // 检查是否存在
-  auto& objs = dbs_[db].objs();
-  auto it = objs.find(key);
-  if (it == objs.end()) {
-    return nullptr;
-  }
-
-  // 检查是否过期
-  auto& obj = it->second;
-  if (obj->PTtl() == 0) {
-    objs.erase(it);
-    return nullptr;
-  }
-
-  return obj;
-}
-
-void Inst::SetObject(string key, shared_ptr<Object> obj, int db) {
-  if (db == -1) {
-    db = cur_db_;
-  }
-  assert(db >= 0 && db < dbs_.size());
-  dbs_[db].objs()[std::move(key)] = obj;
-}
-
-int Inst::DeleteObject(const string& key, int db) {
-  if (db == -1) {
-    db = cur_db_;
-  }
-  assert(db >= 0 && db < dbs_.size());
-  return dbs_[db].objs().erase(key);
 }
 
 void Inst::RegisterCmd(string name, Cmd cmd) {
@@ -134,28 +88,30 @@ void Inst::RegisterCmd(string name, Cmd cmd) {
   cmds_[std::move(name)] = std::move(cmd);
 }
 
-void Inst::Handle(const Req& req, Resp& resp) {
-  if (req.pieces().empty()) {
-    resp.piece() = make_shared<ErrorPiece>("empty commmand");
+void Inst::Handle(Ctx& ctx, Req req) {
+  if (req.empty()) {
+    auto piece = make_shared<ErrorPiece>("empty commmand");
+    ctx.Reply(piece);
     return;
   }
 
-  string cmd_name = req.pieces().front();
+  string cmd_name = req.front();
   StrLower(cmd_name);
 
   auto it = cmds_.find(cmd_name);
   if (it == cmds_.end()) {
-    string err_str = format("unknown command '{}', with args beginning with:",
-                            req.pieces().front());
-    for (size_t i = 1; i < req.pieces().size(); i++) {
-      err_str += format(" '{}'", req.pieces()[i]);
+    string err_str =
+        format("unknown command '{}', with args beginning with:", req.front());
+    for (size_t i = 1; i < req.size(); i++) {
+      err_str += format(" '{}'", req[i]);
     }
-    resp.piece() = make_shared<ErrorPiece>(std::move(err_str));
+    auto piece = make_shared<ErrorPiece>(std::move(err_str));
+    ctx.Reply(piece);
     return;
   }
 
   const auto& cmd = it->second;
-  cmd(req, resp);
+  cmd(ctx, std::move(req));
 }
 
 }  // namespace mydss::db

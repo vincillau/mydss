@@ -22,9 +22,11 @@
 
 namespace mydss::err {
 
-constexpr size_t kErrnoStrBufSize = 64;
+// strerror_r 的缓冲区大小
+static constexpr size_t kErrnoStrBufSize = 64;
 
 // 线程安全版本的 str_error
+// 返回当前 errno 对应的错误信息
 inline static std::string ErrnoStr() {
   char buf[kErrnoStrBufSize] = {};
   const char* err_str = strerror_r(errno, buf, kErrnoStrBufSize);

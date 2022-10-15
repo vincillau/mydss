@@ -16,9 +16,8 @@
 #define MYDSS_INCLUDE_DB_INST_HPP_
 
 #include <functional>
-#include <proto/piece.hpp>
-#include <proto/req.hpp>
-#include <proto/resp.hpp>
+#include <module/ctx.hpp>
+#include <module/req.hpp>
 #include <vector>
 
 #include "db.hpp"
@@ -28,20 +27,17 @@ namespace mydss::db {
 // 一个数据库实例
 class Inst {
  public:
-  using Cmd = std::function<void(const proto::Req&, proto::Resp&)>;
+  using Cmd = std::function<void(module::Ctx& ctx, module::Req)>;
 
   static void Init(int db_num);
   static std::shared_ptr<Inst> GetInst() { return inst_; }
 
-  [[nodiscard]] std::shared_ptr<Object> GetObject(const std::string& key,
-                                                  int db = -1);
-  void SetObject(std::string key, std::shared_ptr<Object> obj, int db = -1);
-  int DeleteObject(const std::string& key, int db = -1);
-
   void RegisterCmd(std::string name, Cmd cmd);
-  void Handle(const proto::Req& req, proto::Resp& resp);
+  void Handle(module::Ctx& ctx, module::Req req);
 
-  bool Select(int db_index) {
+  [[nodiscard]] auto& db() { return dbs_[cur_db_]; }
+
+  [[nodiscard]] bool Select(int db_index) {
     if (db_index < 0 || db_index >= dbs_.size()) {
       return false;
     }

@@ -15,21 +15,20 @@
 #ifndef MYDSS_INCLUDE_CMD_CONNECTION_HPP_
 #define MYDSS_INCLUDE_CMD_CONNECTION_HPP_
 
-#include <proto/req.hpp>
-#include <proto/resp.hpp>
+#include <module/api.hpp>
 
 namespace mydss::cmd {
 
 class Connection {
  public:
-  static void Client(const proto::Req& req, proto::Resp& resp);
-  static void ClientGetName(const proto::Req& req, proto::Resp& resp);
-  static void ClientId(const proto::Req& req, proto::Resp& resp);
-  static void ClientSetName(const proto::Req& req, proto::Resp& resp);
-  static void Echo(const proto::Req& req, proto::Resp& resp);
-  static void Ping(const proto::Req& req, proto::Resp& resp);
-  static void Quit(const proto::Req& req, proto::Resp& resp);
-  static void Select(const proto::Req& req, proto::Resp& resp);
+  static void Client(module::Ctx& ctx, module::Req req);
+  static void ClientGetName(module::Ctx& ctx, module::Req req);
+  static void ClientId(module::Ctx& ctx, module::Req req);
+  static void ClientSetName(module::Ctx& ctx, module::Req req);
+  static void Echo(module::Ctx& ctx, module::Req req);
+  static void Ping(module::Ctx& ctx, module::Req req);
+  static void Quit(module::Ctx& ctx, module::Req req);
+  static void Select(module::Ctx& ctx, module::Req req);
 };
 
 }  // namespace mydss::cmd

@@ -16,9 +16,10 @@
 #define MYDSS_INCLUDE_NET_ACCEPTOR_HPP_
 
 #include <functional>
+#include <list>
 
-#include "addr.hpp"
 #include "conn.hpp"
+#include "end_point.hpp"
 #include "loop.hpp"
 
 namespace mydss::net {
@@ -26,28 +27,30 @@ namespace mydss::net {
 class Acceptor : public std::enable_shared_from_this<Acceptor> {
  public:
   // 接受连接事件的 handler
-  using AcceptHandler = std::function<void()>;
+  using AcceptHandler = std::function<void(err::Status)>;
 
   // 保证所有的 Acceptor 对象都由 std::shared_ptr 持有
-  [[nodiscard]] static auto New(std::shared_ptr<Loop> loop) {
-    return std::shared_ptr<Acceptor>(new Acceptor(loop));
+  [[nodiscard]] static auto New(std::shared_ptr<Loop> loop, EndPoint ep) {
+    return std::shared_ptr<Acceptor>(new Acceptor(loop, std::move(ep)));
   }
 
-  // 将 Acceptor 绑定到 addr
-  void Bind(const Addr& addr);
-
   // 开始接受连接
-  void Listen(int backlog);
+  // backlog 传递给 listen 系统调用
+  [[nodiscard]] err::Status Start(int backlog);
 
   // 异步接受连接
   void AsyncAccept(std::shared_ptr<Conn> conn, AcceptHandler handler);
 
  private:
-  Acceptor(std::shared_ptr<Loop> loop);
+  // 接收连接的请求
+  class Req;
+
+  // 构造 Acceptor 对象
+  explicit Acceptor(std::shared_ptr<Loop> loop, EndPoint ep)
+      : loop_(loop), listen_fd_(-1), ep_(std::move(ep)) {}
 
   // 接受连接
-  // 若成功，返回 true；若发生 EAGAIN 错误，返回 false
-  bool Accept(std::shared_ptr<Conn> conn);
+  err::Status Accept(std::shared_ptr<Conn> conn);
 
   // 处理可以建立连接的事件
   static void OnAccept(std::shared_ptr<Acceptor> acceptor);
@@ -55,8 +58,22 @@ class Acceptor : public std::enable_shared_from_this<Acceptor> {
  private:
   std::shared_ptr<Loop> loop_;  // 监听 listen_fd_ 的事件循环
   int listen_fd_;               // 监听套接字
-  std::shared_ptr<Conn> conn_;  // 接受的 Conn 对象
-  AcceptHandler handler_;       // 处理连接事件的 handler
+  EndPoint ep_;                 // 绑定的端点
+  std::list<Req> reqs_;         // 建立连接的请求
+};
+
+class Acceptor::Req {
+ public:
+  Req() = default;
+  Req(std::shared_ptr<Conn> conn, AcceptHandler handler)
+      : conn_(conn), handler_(std::move(handler)) {}
+
+  [[nodiscard]] auto& conn() { return conn_; }
+  [[nodiscard]] const auto& handler() const { return handler_; }
+
+ private:
+  std::shared_ptr<Conn> conn_;
+  AcceptHandler handler_;
 };
 
 }  // namespace mydss::net

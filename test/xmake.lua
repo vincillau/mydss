@@ -16,4 +16,6 @@ target("test_main")
     set_kind("static")
     set_group("test")
     add_files("test_main.cpp")
-    add_packages("fmt", "gtest", "spdlog")
+    add_packages("gtest", "spdlog")
+
+includes("err")
