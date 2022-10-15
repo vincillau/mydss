@@ -70,6 +70,7 @@ Status Arg::Parse(int argc, char** argv) {
         return Status::Ok();
       case kVersionVal:
         // 解析到 --version 选项则立即返回
+        version_ = true;
         return Status::Ok();
       case '?':
         if (optopt == 'c') {
