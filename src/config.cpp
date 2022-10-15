@@ -78,9 +78,9 @@ Status DbConfig::Load(const json& json, DbConfig& result) {
     if (!db_num.is_number_integer()) {
       return {kInvalidConfig, "the 'db.db_num' field must be a integer"};
     }
-    if (db <= 0 || db > 255) {
+    if (db_num <= 0 || db_num > 255) {
       return {kInvalidConfig,
-              "'the server[{}].port' field must be in the range of 1-65535"};
+              "the 'db.db_num' field must be in the range of 1-255"};
     }
     dc.set_db_num(db_num);
   }
@@ -189,7 +189,7 @@ Status LoadServerItem(const json& item, size_t index, ServerConfig& result) {
     if (port <= 0 || port > 65535) {
       return {
           kInvalidConfig,
-          format("'the server[{}].port' field must be in the range of 1-65535",
+          format("the 'server[{}].port' field must be in the range of 1-65535",
                  index)};
     }
     result.set_port(port);
